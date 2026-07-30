@@ -1,6 +1,3 @@
--- ======================================================
--- BIBLIOTECA Seree (versão loadstring)
--- ======================================================
 local inputService   = game:GetService("UserInputService")
 local runService     = game:GetService("RunService")
 local tweenService   = game:GetService("TweenService")
