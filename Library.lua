@@ -1967,10 +1967,20 @@ local Library = {
                 Keybind:SetOpen(not Keybind.IsOpen)
             end)
     
-            if Data.Default then 
+            if Data.Default then
+                local resolvedKey = Data.Default
+                if type(resolvedKey) == "string" and not resolvedKey:find("Enum") then
+                    local ok, val = pcall(function() return Enum.KeyCode[resolvedKey] end)
+                    if ok and val then
+                        resolvedKey = tostring(val)
+                    else
+                        local ok2, val2 = pcall(function() return Enum.UserInputType[resolvedKey] end)
+                        if ok2 and val2 then resolvedKey = tostring(val2) end
+                    end
+                end
                 Keybind:Set({
                     Mode = Data.Mode or "Toggle",
-                    Key = Data.Default,
+                    Key = resolvedKey,
                 })
             end
     
@@ -3656,7 +3666,7 @@ local Library = {
 
             local Dropdown = {
                 Name = Params.Name or Params.name or "Dropdown",
-                OptionItems = Params.Items or Params.items or { },
+                OptionItems = Params.Items or Params.items or Params.List or Params.list or { },
                 Flag = Params.Flag or Params.flag or (Params.Name or Params.name),
                 Default = Params.Default or Params.default or "",
                 Callback = Params.Callback or Params.callback or function() end,
