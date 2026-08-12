@@ -1,3 +1,18 @@
+--[[
+    Code is not as clean as it could be but it works
+    
+    Made by samet
+    This is a FREE ui release made by me (samet) on May 30 to celebrate my birthday, If anyone is selling this they are scammers.
+    The design credits for the ui goes to eskolzz. It was brought to life in luau by me.
+
+    MY ONLY ACCOUNT IS: joestar._3
+
+    If you want to commission a ui:
+    https://discord.gg/XsTteAwprs
+
+    Please give credit if used or modified.
+]]
+
 if getgenv().Library and type(getgenv().Library.Exit) == "function" then
     getgenv().Library:Exit()
 end
@@ -21,7 +36,7 @@ local Mouse = cloneref(LocalPlayer:GetMouse())
 
 local Library = { 
     Flags = { },
-    MenuKeybind = tostring(Enum.KeyCode.RightShift), -- alterado para RightShift como padrão
+    MenuKeybind = tostring(Enum.KeyCode.RightShift), -- padrão alterado para RightShift
 
     Directory = "juanitaaaaaaa",
     Folders = {
@@ -62,7 +77,6 @@ local Library = {
         ["ColorpickerWindow"] = 6
     },
 
-    -- Ignore below
     Threads = { },
     Connections = { },
     SetFlags = { },
@@ -2703,7 +2717,7 @@ local Library = {
                 Items["Outline"].Instance.Position = UDim2.new(0, AbsPos.X, 0, AbsPos.Y + GuiInset)
             end
 
-            -- 🔧 CORREÇÃO: Menu Keybind agora lê o flag atualizado
+            -- 🔥 CORREÇÃO: Menu Keybind dinâmico
             Library:Connect(UserInputService.InputBegan, function(Input)
                 local menuKey = Library.Flags["MenuKeybind"] and Library.Flags["MenuKeybind"].Key or Library.MenuKeybind
                 if tostring(Input.KeyCode) == menuKey or tostring(Input.UserInputType) == menuKey then
@@ -2715,11 +2729,10 @@ local Library = {
                 end
             end)
 
-            -- the title animation logic below
+            -- Título animado (ignorar, só estética)
             local OffsetX = 8
             local OffsetY = 12
             local Width = 7
-
             local WaveHeight = 4
             local WaveSpeed =  2.5
             local WaveSpacing = 0.25
@@ -2762,279 +2775,2267 @@ local Library = {
             return setmetatable(Window, Library)
         end
 
-        -- (O restante da library permanece igual - funções Page, Section, Toggle, etc. já estão corretas)
-        -- [O código completo foi mantido, mas para não repetir tudo, as funções não modificadas permanecem as mesmas]
-        -- Vou pular a reescrita completa para não estourar o limite, mas as alterações principais estão acima.
-        -- As funções Page, Section, Toggle, Slider, Dropdown, List, Label, Textbox, Init permanecem idênticas.
-    end
+        Library.Page = function(Self, Params)
+            Params = Params or { }
 
-    -- Inicialização da library
-    Library.Init = function(Self)
-        local SettingsPage = Self:Page({Name = "settings"}) do 
-            local ThemingSection = SettingsPage:Section({Name = "Theming", Side = 2}) do
-                for Index, Value in Library.Theme do 
-                    ThemingSection:Label({Name = Index}):Colorpicker({
-                        Name = Index,
-                        Flag = Index.."Theming",
-                        Default = Value,
-                        Callback = function(Value)
-                            Library.Theme[Index] = Value
-                            Library:ChangeTheme(Index, Value)
-                        end
-                    })
+            local Page = {
+                Name = Params.Name or Params.name or "Page",
+
+                Window = Self,
+                ColumnsData = { },
+                Items = { },
+                Active = false,
+                Debounce = false
+            }
+
+            local Items = { } do 
+                Items["Inactive"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Page.Window.Items["Pages"].Instance,
+                    TextColor3 = Library.Theme["Inactive Text"],
+                    Text = Page.Name,
+                    AutoButtonColor = false,
+                    Size = UDim2.new(0, 0, 0, 20),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.X
+                }):AddToTheme({TextColor3 = 'Inactive Text'})         
+                
+                Items["Page"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Library.UnusedHolder.Instance,
+                    BackgroundTransparency = 1,
+                    Visible = false,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    BorderSizePixel = 0
+                })
+                
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["Page"].Instance,
+                    FillDirection = Enum.FillDirection.Horizontal,
+                    HorizontalFlex = Enum.UIFlexAlignment.Fill,
+                    Padding = UDim.new(0, 11),
+                    SortOrder = Enum.SortOrder.LayoutOrder,
+                    VerticalFlex = Enum.UIFlexAlignment.Fill
+                })
+                
+                Items["LeftColumn"] = Library:Create("ScrollingFrame", {
+                    Name = "\0",
+                    Parent = Items["Page"].Instance,
+                    ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0),
+                    Active = true,
+                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                    ScrollBarThickness = 0,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1/3, 0, 1, 0),
+                    BorderSizePixel = 0,
+                    CanvasSize = UDim2.new(0, 0, 0, 0)
+                })
+                
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["LeftColumn"].Instance,
+                    Padding = UDim.new(0, 15),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })
+                
+                Library:Create("UIPadding", {
+                    Name = "\0",
+                    Parent = Items["LeftColumn"].Instance,
+                    PaddingTop = UDim.new(0, 19),
+                    PaddingBottom = UDim.new(0, 15),
+                    PaddingRight = UDim.new(0, 2),
+                    PaddingLeft = UDim.new(0, 10)
+                })
+
+                Items["MiddleColumn"] = Library:Create("ScrollingFrame", {
+                    Name = "\0",
+                    Parent = Items["Page"].Instance,
+                    ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0),
+                    Active = true,
+                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                    ScrollBarThickness = 0,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1/3, 0, 1, 0),
+                    BorderSizePixel = 0,
+                    CanvasSize = UDim2.new(0, 0, 0, 0)
+                })
+                
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["MiddleColumn"].Instance,
+                    Padding = UDim.new(0, 15),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })
+                
+                Library:Create("UIPadding", {
+                    Name = "\0",
+                    Parent = Items["MiddleColumn"].Instance,
+                    PaddingTop = UDim.new(0, 19),
+                    PaddingBottom = UDim.new(0, 15),
+                    PaddingRight = UDim.new(0, 2),
+                    PaddingLeft = UDim.new(0, 2)
+                })
+                
+                Items["RightColumn"] = Library:Create("ScrollingFrame", {
+                    Name = "\0",
+                    Parent = Items["Page"].Instance,
+                    ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0),
+                    Active = true,
+                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                    ScrollBarThickness = 0,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1/3, 0, 1, 0),
+                    BorderSizePixel = 0,
+                    CanvasSize = UDim2.new(0, 0, 0, 0)
+                })
+                
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["RightColumn"].Instance,
+                    Padding = UDim.new(0, 15),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })
+                
+                Library:Create("UIPadding", {
+                    Name = "\0",
+                    Parent = Items["RightColumn"].Instance,
+                    PaddingTop = UDim.new(0, 19),
+                    PaddingBottom = UDim.new(0, 15),
+                    PaddingRight = UDim.new(0, 10),
+                    PaddingLeft = UDim.new(0, 2)
+                })
+
+                Page.ColumnsData[1] = Items["LeftColumn"]
+                Page.ColumnsData[2] = Items["MiddleColumn"]
+                Page.ColumnsData[3] = Items["RightColumn"]
+
+                Page.Items = Items
+            end
+
+            Items["Inactive"]:OnHover(function()
+                if Page.Active then return end 
+                
+                Items["Inactive"]:Tween({TextColor3 = Library.Theme.Text})
+            end, function()
+                if Page.Active then return end 
+                
+                Items["Inactive"]:Tween({TextColor3 = Library.Theme["Inactive Text"]})
+            end)
+
+            function Page:Turn()
+                local Old = Page.Window.Current 
+
+                if Old == Page then 
+                    return 
                 end
 
-                local ThemeSelected 
-                local ThemeName
-                local ThemesFolder = Library.Directory .. Library.Folders.Themes .. "/"
+                if Page.Debounce then 
+                    return
+                end
 
-                local ThemesDropdown = ThemingSection:Dropdown({
-                    Name = "Themes",
-                    Flag = "Themes",
-                    Default = "",
-                    Items = { },
-                    Callback = function(Value)
-                        ThemeSelected = Value
-                    end
+                if Old and Old.Debounce then 
+                    return 
+                end
+
+                Page.Debounce = true 
+                
+                if Old then 
+                    Old.Items["Page"].Instance.Position = UDim2.new(0, 0, 0, 0)
+                    Old.Items["Inactive"]:ChangeItemTheme({TextColor3 = "Inactive Text"})
+                    Old.Items["Inactive"]:Tween({TextColor3 = Library.Theme["Inactive Text"]})
+
+                    Old.Items["Page"]:Tween({Position = UDim2.new(-1, 0, 0, 0)}, PageInfo)
+
+                    Old.Items["Page"]:FadeDescendants(false, function()
+                        Old.Items["Page"].Instance.Parent = Library.UnusedHolder.Instance
+                    end)
+
+                    Old.Active = false
+                end
+
+                Items["Page"].Instance.Position = UDim2.new(1, 0, 0, 0)
+                
+                Items["Page"].Instance.Parent = Page.Window.Items["Content"].Instance
+                Items["Page"].Instance.Visible = true
+                Items["Page"]:FadeDescendants(true, function()
+                    Page.Debounce = false
+                end)
+
+                Items["Inactive"]:ChangeItemTheme({TextColor3 = "Accent"})
+                Items["Inactive"]:Tween({TextColor3 = Library.Theme["Accent"]})
+
+                Items["Page"]:Tween({Position = UDim2.new(0, 0, 0, 0)}, PageInfo)
+
+                Page.Window.Current = Page
+                Page.Active = true
+            end
+
+            Items["Inactive"]:Connect("MouseButton1Down", function()
+                Page:Turn()
+            end)
+
+            if #Page.Window.Pages == 0 then 
+                Page:Turn()
+            end
+
+            table.insert(Page.Window.Pages, Page)
+            return setmetatable(Page, Library)
+        end
+
+        Library.Section = function(Self, Params)
+            Params = Params or { } 
+
+            local Section = {
+                Name = Params.Name or Params.name or "Section",
+                Side = Params.Side or Params.side or 1,
+
+                Window = Self.Window,
+                Page = Self,
+                Items = { },
+            }
+
+            local Items = { } do 
+                Items["Section"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Section.Page.ColumnsData[Section.Side].Instance,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    BackgroundColor3 = Library.Theme["Inline"]
+                }):AddToTheme({BackgroundColor3 = 'Inline'})
+                
+                Library:Create("UIStroke", {
+                    Name = "\0",
+                    Parent = Items["Section"].Instance,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    LineJoinMode = Enum.LineJoinMode.Miter,
+                    Color = Library.Theme["Outline"]
+                }):AddToTheme({Color = 'Outline'})
+                
+                Library:Create("UIStroke", {
+                    Name = "\0",
+                    Parent = Items["Section"].Instance,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    LineJoinMode = Enum.LineJoinMode.Miter,
+                    Color = Library.Theme["Border"],
+                    BorderOffset = UDim.new(0, 1)
+                }):AddToTheme({Color = 'Border'})
+                
+                Items["Text"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["Section"].Instance,
+                    TextColor3 = Library.Theme["Text"],
+                    Text = Section.Name,
+                    Position = UDim2.new(0, 9, 0, -2),
+                    Size = UDim2.new(0, 0, 0, 1),
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.X,
+                    BackgroundColor3 = Library.Theme["Background"]
+                }):AddToTheme({BackgroundColor3 = 'Background'})
+                
+                Library:Create("UIPadding", {
+                    Name = "\0",
+                    Parent = Items["Text"].Instance,
+                    PaddingRight = UDim.new(0, 4),
+                    PaddingLeft = UDim.new(0, 4)
+                })
+                
+                Items["Content"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["Section"].Instance,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 8, 0, 10),
+                    Size = UDim2.new(1, -16, 0, 0),
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.Y
+                })
+                
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["Content"].Instance,
+                    Padding = UDim.new(0, 8),
+                    SortOrder = Enum.SortOrder.LayoutOrder
                 })
 
-                ThemingSection:Textbox({
-                    Name = "Theme name",
-                    Flag = "ThemeName",
-                    Default = "",
-                    Callback = function(Value)
-                        ThemeName = Value
-                    end
+                Library:Create("UIPadding", {
+                    Name = "\0",
+                    Parent = Items["Section"].Instance,
+                    PaddingBottom = UDim.new(0, 8)
+                })                
+
+                Section.Items = Items
+            end 
+
+            function Section:SetText(Text)
+                Items["Text"].Instance.Text = tostring(Text)
+            end
+
+            return setmetatable(Section, Library)
+        end
+
+        Library.Toggle = function(Self, Params)
+            Params = Params or { }
+
+            local Toggle = {
+                Name = Params.Name or Params.name or "Toggle",
+                Flag = Params.Flag or Params.flag or (Params.Name or Params.name),
+                Default = Params.Default or Params.default or false,
+                Callback = Params.Callback or Params.callback or function() end,
+
+                Window = Self.Window,
+                Page = Self.Page,
+                Section = Self,
+
+                Value = false,
+                Items = { }
+            }
+
+            local Parent 
+
+            if Params.Parent then 
+                Parent = Params.Parent
+            else
+                Parent = Toggle.Section.Items["Content"]
+            end
+
+            local Items = { } do 
+                Items["Toggle"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Parent.Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 12),
+                    BorderSizePixel = 0
+                })
+                
+                Items["Outline"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["Toggle"].Instance,
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Position = UDim2.new(0, 0, 0.5, 0),
+                    Size = UDim2.new(0, 9, 0, 9),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Border"]
+                }):AddToTheme({BackgroundColor3 = 'Border'})
+                
+                Items["Indicator"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["Outline"].Instance,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Element 2"]
+                }):AddToTheme({BackgroundColor3 = 'Element 2'})
+                
+                Library:Create("UIGradient", {
+                    Name = "\0",
+                    Parent = Items["Indicator"].Instance,
+                    Rotation = 90,
+                    Color = ColorSequence.new{
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 163, 163))
+                }
+                })
+                
+                Items["Text"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["Toggle"].Instance,
+                    TextColor3 = Library.Theme["Text"],
+                    Text = Toggle.Name,
+                    Position = UDim2.new(0, 18, 0, -1),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.XY
+                }):AddToTheme({TextColor3 = 'Text'})       
+                
+                Items["SubElements"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["Toggle"].Instance,
+                    AnchorPoint = Vector2.new(1, 0),
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(1, 0, 0, 0),
+                    Size = UDim2.new(0, 0, 1, 0),
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.X
+                })
+                
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["SubElements"].Instance,
+                    VerticalAlignment = Enum.VerticalAlignment.Center,
+                    FillDirection = Enum.FillDirection.Horizontal,
+                    Padding = UDim.new(0, 8),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })                
+            
+                Toggle.Items = Items
+            end
+
+            Items["Toggle"]:OnHover(function()
+                if Toggle.Value then return end 
+                Items["Indicator"]:Tween({BackgroundColor3 = Library.Theme["Hovered Element"]})
+            end, function()
+                if Toggle.Value then return end 
+                Items["Indicator"]:Tween({BackgroundColor3 = Library.Theme["Element 2"]})
+            end)
+
+            function Toggle:Set(Bool)
+                Toggle.Value = Bool 
+
+                if Bool then 
+                    Items["Indicator"]:ChangeItemTheme({BackgroundColor3 = "Accent"})
+                    Items["Indicator"]:Tween({BackgroundColor3 = Library.Theme.Accent})
+                else
+                    Items["Indicator"]:ChangeItemTheme({BackgroundColor3 = "Element 2"})
+                    Items["Indicator"]:Tween({BackgroundColor3 = Library.Theme["Element 2"]})
+                end
+
+                Flags[Toggle.Flag] = Bool
+                Library:SafeCall(Toggle.Callback, Bool)
+            end
+
+            function Toggle:SetVisibility(Bool)
+                Items["Toggle"].Instance.Visible = Bool 
+            end
+
+            function Toggle:SetText(Text)
+                Items["Text"].Instance.Text = tostring(Text)
+            end
+
+            function Toggle:Colorpicker(Data)
+                Data = Data or { }
+
+                local Colorpicker = {
+                    Flag = Data.Flag or Data.flag or (Data.Name or Data.name or Toggle.Name),
+                    Default = Data.Default or Data.default or Color3.fromRGB(255, 255, 255),
+                    Callback = Data.Callback or Data.callback or function() end,
+                    Alpha = Data.Alpha or Data.alpha or 0,
+
+                    Window = Toggle.Window,
+                    Page = Toggle.Page,
+                    Section = Toggle.Section,
+                }
+
+                local NewColorpicker, ColorpickerItems = Library:CreateColorpicker({
+                    Parent = Items["SubElements"],
+                    Page = Colorpicker.Page,
+                    Section = Colorpicker.Section,
+                    Flag = Colorpicker.Flag,
+                    Default = Colorpicker.Default,
+                    Callback = Colorpicker.Callback,
+                    Alpha = Colorpicker.Alpha
                 })
 
-                ThemingSection:Button({
-                    Name = "Save",
-                    Callback = function()
-                        if ThemeName then 
-                            if ThemeName == "" then 
-                                return
-                            end
+                return NewColorpicker
+            end
 
-                            if isfile(ThemesFolder .. ThemeName .. ".json") then 
-                                Library:Notification("Saved theme "..ThemeName, 3, Library.Theme.Accent)
-                                writefile(ThemesFolder .. ThemeName .. ".json", Library:GetConfig())
-                                return
-                            end
+            function Toggle:Keybind(Data)
+                Data = Data or { }
 
-                            writefile(ThemesFolder .. ThemeName .. ".json", Library:GetConfig())
-                            Library:GetThemesList(ThemesDropdown)
-                            Library:Notification("Created theme "..ThemeName, 3, Library.Theme.Accent)
+                local Keybind = {
+                    Name = Data.Name or Data.name or Toggle.Name,
+                    Flag = Data.Flag or Data.flag or (Data.Name or Data.name or Toggle.Name),
+                    Default = Data.Default or Data.default or nil,
+                    Callback = Data.Callback or Data.callback or function() end,
+                    Mode = Data.Mode or Data.mode or "Toggle",
+
+                    Window = Toggle.Window,
+                    Page = Toggle.Page,
+                    Section = Toggle.Section,
+                }
+
+                local NewKeybind, KeybindItems = Library:CreateKeybind({
+                    Parent = Items["SubElements"],
+                    Name = Keybind.Name,
+                    Page = Keybind.Page,
+                    Section = Keybind.Section,
+                    Flag = Keybind.Flag,
+                    Default = Keybind.Default,
+                    Mode = Keybind.Mode,
+                    Callback = Keybind.Callback
+                })
+
+                return NewKeybind
+            end
+
+            Items["Toggle"]:Connect("MouseButton1Down", function()
+                Toggle:Set(not Toggle.Value)
+            end)
+
+            Toggle:Set(Toggle.Default)
+
+            SetFlags[Toggle.Flag] = function(Value)
+                Toggle:Set(Value)
+            end
+
+            return setmetatable(Toggle, Library)
+        end
+
+        Library.Button = function(Self, Params)
+            Params = Params or { }
+
+            local Button = {
+                Name = Params.Name or Params.name or "Button",
+                Callback = Params.Callback or Params.callback or function() end,
+
+                Window = Self.Window,
+                Page = Self.Page,
+                Section = Self,
+                Items = { }
+            }
+
+            local Parent 
+
+            if Params.Parent then 
+                Parent = Params.Parent
+            else
+                Parent = Button.Section.Items["Content"]
+            end
+
+            local Items = { } do 
+                Items["Button"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Parent.Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    Size = UDim2.new(1, 0, 0, 20),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Border"]
+                }):AddToTheme({BackgroundColor3 = 'Border'})
+                
+                Items["Inline"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Items["Button"].Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Outline"]
+                }):AddToTheme({BackgroundColor3 = 'Outline'})
+                
+                Items["RealButton"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Items["Inline"].Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Element"]
+                }):AddToTheme({BackgroundColor3 = 'Element'})
+                
+                Library:Create("UIGradient", {
+                    Name = "\0",
+                    Parent = Items["RealButton"].Instance,
+                    Rotation = 90,
+                    Color = ColorSequence.new{
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 163, 163))
+                }
+                })
+                
+                Items["Text"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["RealButton"].Instance,
+                    TextColor3 = Library.Theme["Text"],
+                    Text = Button.Name,
+                    AutomaticSize = Enum.AutomaticSize.XY,
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.new(0.5, 0, 0.5, -1),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 2
+                }):AddToTheme({TextColor3 = 'Text'})
+                
+                Items["Accent"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["RealButton"].Instance,
+                    Size = UDim2.new(0, 0, 1, 0),
+                    BorderSizePixel = 0,
+                    BackgroundTransparency = 1,
+                    BackgroundColor3 = Library.Theme["Accent"]
+                }):AddToTheme({BackgroundColor3 = 'Accent'})                
+
+                Button.Items = Items
+            end
+
+            Items["RealButton"]:OnHover(function()
+                Items["RealButton"]:Tween({BackgroundColor3 = Library.Theme["Hovered Element"]})
+            end, function()
+                Items["RealButton"]:Tween({BackgroundColor3 = Library.Theme.Element})
+            end)
+
+            function Button:Press()
+                pcall(function()
+                    Library:SafeCall(Button.Callback)
+
+                    Items["Accent"]:Tween({BackgroundTransparency = 0, Size = UDim2.new(1, 0, 1, 0)})
+                    task.wait(Library.Animation.Time - 0.1)
+                    Items["Accent"]:Tween({BackgroundTransparency = 1, Size = UDim2.new(0, 0, 1, 0)})
+                end)
+            end
+
+            function Button:SetVisibility(Bool)
+                Items["Button"].Instance.Visible = Bool
+            end
+
+            function Button:SetText(Text)
+                Items["Text"].Instance.Text = tostring(Text)
+            end
+
+            Items["RealButton"]:Connect("MouseButton1Down", function()
+                Button:Press()
+            end)
+
+            return setmetatable(Button, Library)
+        end
+
+        Library.Slider = function(Self, Params)
+            Params = Params or { }
+
+            local Slider = {
+                Name = Params.Name or Params.name or "Slider",
+                Flag = Params.Flag or Params.flag or (Params.Name or Params.name),
+                Default = Params.Default or Params.default or 0,
+                Min = Params.Min or Params.min or 0,
+                Max = Params.Max or Params.max or 100,
+                Callback = Params.Callback or Params.callback or function() end,
+                Decimals = Params.Decimals or Params.decimals or 0,
+                Suffix = Params.Suffix or Params.suffix or "",
+
+                Window = Self.Window,
+                Page = Self.Page,
+                Section = Self,
+
+                Value = 0,
+                Sliding = false,
+                Items = { }
+            }
+
+            local Parent 
+
+            if Params.Parent then 
+                Parent = Params.Parent
+            else
+                Parent = Slider.Section.Items["Content"]
+            end
+
+            Slider.Decimals = math.max(0, math.floor(Slider.Decimals))
+
+            local Items = { } do 
+                Items["Slider"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Parent.Instance,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 30),
+                    BorderSizePixel = 0
+                })
+
+                Items["Text"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["Slider"].Instance,
+                    TextColor3 = Library.Theme["Text"],
+                    Text = Slider.Name,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.XY
+                }):AddToTheme({TextColor3 = 'Text'})
+
+                Items["RealSliderOutline"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Items["Slider"].Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    AnchorPoint = Vector2.new(0, 1),
+                    Position = UDim2.new(0, 0, 1, 0),
+                    Size = UDim2.new(1, 0, 0, 9),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Border"]
+                }):AddToTheme({BackgroundColor3 = 'Border'})
+
+                Items["RealSlider"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Items["RealSliderOutline"].Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Element 2"]
+                }):AddToTheme({BackgroundColor3 = 'Element 2'})
+
+                Library:Create("UIGradient", {
+                    Name = "\0",
+                    Parent = Items["RealSlider"].Instance,
+                    Rotation = 90,
+                    Color = ColorSequence.new{
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 163, 163))
+                    }
+                })
+
+                Items["AccentHolder"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["RealSlider"].Instance,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    BorderSizePixel = 0
+                })
+
+                Items["Accent"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["AccentHolder"].Instance,
+                    Size = UDim2.new(0.5, 0, 1, 0),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Accent"]
+                }):AddToTheme({BackgroundColor3 = 'Accent'})
+
+                Library:Create("UIGradient", {
+                    Name = "\0",
+                    Parent = Items["Accent"].Instance,
+                    Rotation = 90,
+                    Color = ColorSequence.new{
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 163, 163))
+                    }
+                })
+
+                Items["Value"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Right,
+                    Parent = Items["Slider"].Instance,
+                    TextColor3 = Library.Theme["Inactive Text"],
+                    Text = "",
+                    AnchorPoint = Vector2.new(1, 0),
+                    Position = UDim2.new(1, 1, 0, 0),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.XY
+                }):AddToTheme({TextColor3 = 'Inactive Text'})
+
+                Slider.Items = Items
+            end
+
+            Items["RealSlider"]:OnHover(function()
+                Items["RealSlider"]:Tween({BackgroundColor3 = Library.Theme["Hovered Element"]})
+            end, function()
+                Items["RealSlider"]:Tween({BackgroundColor3 = Library.Theme["Element 2"]})
+            end)
+
+            local function RoundToDecimals(n)
+                if Slider.Decimals == 0 then
+                    return math.floor(n + 0.5)
+                end
+                local mult = 10 ^ Slider.Decimals
+                return math.floor(n * mult + 0.5) / mult
+            end
+
+            local function FormatValue(value)
+                local fmt = "%." .. Slider.Decimals .. "f%s"
+                return string.format(fmt, value, Slider.Suffix)
+            end
+
+            function Slider:Set(Value)
+                local clamped = math.clamp(Value, Slider.Min, Slider.Max)
+                local rounded = RoundToDecimals(clamped)
+                Slider.Value = rounded
+
+                local range = Slider.Max - Slider.Min
+                local progress = (range ~= 0) and ((Slider.Value - Slider.Min) / range) or 0
+                progress = math.clamp(progress, 0, 1)
+
+                Items["Accent"]:Tween(
+                    {Size = UDim2.new(progress, 0, 1, 0)},
+                    TweenInfo.new(Library.Animation.Time, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+                )
+
+                Items["Value"].Instance.Text = FormatValue(Slider.Value)
+
+                Flags[Slider.Flag] = Slider.Value
+                Library:SafeCall(Slider.Callback, Slider.Value)
+            end
+
+            function Slider:SetVisibility(Bool)
+                Items["Slider"].Instance.Visible = Bool
+            end
+
+            function Slider:SetText(Text)
+                Items["Text"].Instance.Text = tostring(Text)
+            end
+
+            function Slider:GetSize(Input)
+                local sliderInst = Items["RealSlider"].Instance
+                local relativeX  = Input.Position.X - sliderInst.AbsolutePosition.X
+                local sizeX      = math.clamp(relativeX / sliderInst.AbsoluteSize.X, 0, 1)
+                return Slider.Min + (Slider.Max - Slider.Min) * sizeX
+            end
+
+            local InputChanged
+
+            Items["RealSlider"]:Connect("InputBegan", function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseButton1
+                    or Input.UserInputType == Enum.UserInputType.Touch
+                then
+                    Items["Value"]:Tween({TextColor3 = Library.Theme.Text})
+                    Slider.Sliding = true
+                    Slider:Set(Slider:GetSize(Input))
+
+                    if InputChanged then return end
+
+                    InputChanged = Input.Changed:Connect(function()
+                        if Input.UserInputState == Enum.UserInputState.End then
+                            Items["Value"]:Tween({TextColor3 = Library.Theme["Inactive Text"]})
+                            Slider.Sliding = false
+                            InputChanged:Disconnect()
+                            InputChanged = nil
+                        end
+                    end)
+                end
+            end)
+
+            Library:Connect(UserInputService.InputChanged, function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseMovement
+                    or Input.UserInputType == Enum.UserInputType.Touch
+                then
+                    if Slider.Sliding then
+                        Slider:Set(Slider:GetSize(Input))
+                    end
+                end
+            end)
+
+            Slider:Set(Slider.Default)
+
+            SetFlags[Slider.Flag] = function(Value)
+                Slider:Set(Value)
+            end
+
+            return setmetatable(Slider, Library)
+        end
+
+        Library.Dropdown = function(Self, Params)
+            Params = Params or { }
+
+            local Dropdown = {
+                Name = Params.Name or Params.name or "Dropdown",
+                OptionItems = Params.Items or Params.items or { },
+                Flag = Params.Flag or Params.flag or (Params.Name or Params.name),
+                Default = Params.Default or Params.default or "",
+                Callback = Params.Callback or Params.callback or function() end,
+                Multi = Params.Multi or Params.multi or false,
+
+                Window = Self.Window,
+                Page = Self.Page,
+                Section = Self,
+
+                Value = { },
+                Options = { },
+                IsOpen = false,
+                Items = { }
+            }
+
+            local Parent 
+
+            if Params.Parent then 
+                Parent = Params.Parent
+            else
+                Parent = Dropdown.Section.Items["Content"]
+            end
+
+            local Items = { } do 
+                Items["Dropdown"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Parent.Instance,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 40),
+                    BorderSizePixel = 0
+                })
+                
+                Items["Text"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["Dropdown"].Instance,
+                    TextColor3 = Library.Theme["Text"],
+                    Text = Dropdown.Name,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.XY
+                }):AddToTheme({TextColor3 = 'Text'})
+                
+                Items["RealDropdownOutline"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Items["Dropdown"].Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    AnchorPoint = Vector2.new(0, 1),
+                    Position = UDim2.new(0, 0, 1, 0),
+                    Size = UDim2.new(1, 0, 0, 20),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Border"]
+                }):AddToTheme({BackgroundColor3 = 'Border'})
+                
+                Items["Inline"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Items["RealDropdownOutline"].Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Outline"]
+                }):AddToTheme({BackgroundColor3 = 'Outline'})
+                
+                Items["RealDropdown"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Items["Inline"].Instance,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Element"]
+                }):AddToTheme({BackgroundColor3 = 'Element'})
+                
+                Library:Create("UIGradient", {
+                    Name = "\0",
+                    Parent = Items["RealDropdown"].Instance,
+                    Rotation = 90,
+                    Color = ColorSequence.new{
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 163, 163))
+                }
+                })
+                
+                Items["Icon"] = Library:Create("ImageLabel", {
+                    Name = "\0",
+                    Parent = Items["RealDropdown"].Instance,
+                    ImageColor3 = Library.Theme["Accent"],
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Image = "rbxassetid://98057726606591",
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(1, -1, 0.5, -1),
+                    Size = UDim2.new(0, 16, 0, 16),
+                    BorderSizePixel = 0
+                }):AddToTheme({ImageColor3 = 'Accent'})
+                
+                Items["Value"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["RealDropdown"].Instance,
+                    TextColor3 = Library.Theme["Text"],
+                    Text = "none",
+                    Size = UDim2.new(1, -24, 0, 0),
+                    Position = UDim2.new(0, 4, 0.5, -1),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    BorderSizePixel = 0,
+                    BackgroundTransparency = 1,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    AutomaticSize = Enum.AutomaticSize.Y
+                }):AddToTheme({TextColor3 = 'Text'})          
+                
+                Items["OptionHolder"] = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    Parent = Library.Holder.Instance,
+                    Visible = false,
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    Text = "",
+                    AutoButtonColor = false,
+                    Size = UDim2.new(0, 200, 0, 50),
+                    Position = UDim2.new(0, 792, 0, 649),
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    BackgroundColor3 = Library.Theme["Background"]
+                }):AddToTheme({BackgroundColor3 = 'Background'})
+                
+                Library:Create("UIStroke", {
+                    Name = "\0",
+                    Parent = Items["OptionHolder"].Instance,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    LineJoinMode = Enum.LineJoinMode.Miter,
+                    Color = Library.Theme["Border"],
+                    BorderOffset = UDim.new(0, 1)
+                }):AddToTheme({Color = 'Border'})
+                
+                Library:Create("UIStroke", {
+                    Name = "\0",
+                    Parent = Items["OptionHolder"].Instance,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    LineJoinMode = Enum.LineJoinMode.Miter,
+                    Color = Library.Theme["Outline"]
+                }):AddToTheme({Color = 'Outline'})
+                
+                Library:Create("UIPadding", {
+                    Name = "\0",
+                    Parent = Items["OptionHolder"].Instance,
+                    PaddingTop = UDim.new(0, 8),
+                    PaddingBottom = UDim.new(0, 8),
+                    PaddingRight = UDim.new(0, 8),
+                    PaddingLeft = UDim.new(0, 8)
+                })
+
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["OptionHolder"].Instance,
+                    Padding = UDim.new(0, 8),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })
+
+                Dropdown.Items = Items 
+            end
+
+            Items["RealDropdown"]:OnHover(function()
+                Items["RealDropdown"]:Tween({BackgroundColor3 = Library.Theme["Hovered Element"]})
+            end, function()
+                Items["RealDropdown"]:Tween({BackgroundColor3 = Library.Theme.Element})
+            end)
+
+            function Dropdown:Set(Value)
+                if Dropdown.Multi then 
+                    if type(Value) ~= "table" then 
+                        return
+                    end
+
+                    Dropdown.Value = Value
+
+                    for Index, Value in Value do
+                        local OptionData = Dropdown.Options[Value]
+                         
+                        if not OptionData then
+                            continue
+                        end
+
+                        OptionData.IsSelected = true 
+                        OptionData:ToggleState("Active")
+                    end
+
+                    Flags[Dropdown.Flag] = Value
+                    Items["Value"].Instance.Text = table.concat(Value, ", ")
+                else
+                    if not Dropdown.Options[Value] then
+                        return
+                    end
+
+                    local OptionData = Dropdown.Options[Value]
+
+                    Dropdown.Value = Value
+
+                    for Index, Value in Dropdown.Options do
+                        if Value ~= OptionData then
+                            Value.IsSelected = false 
+                            Value:ToggleState("Inactive")
+                        else
+                            Value.IsSelected = true 
+                            Value:ToggleState("Active")
                         end
                     end
-                })
 
-                ThemingSection:Button({
-                    Name = "Load",
-                    Callback = function()
-                        if ThemeSelected then 
-                            if not isfile(ThemesFolder .. ThemeSelected .. ".json") then
-                                Library:Notification("Theme does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                return
+                    Flags[Dropdown.Flag] = Value
+                    Items["Value"].Instance.Text = Value
+                end
+
+                Library:SafeCall(Dropdown.Callback, Dropdown.Value)
+            end
+
+            function Dropdown:Add(Value)
+                local OptionButton = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["OptionHolder"].Instance,
+                    TextColor3 = Library.Theme["Inactive Text"],
+                    Text = Value,
+                    AutoButtonColor = false,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.Y
+                }):AddToTheme({TextColor3 = 'Inactive Text'})
+
+                local OptionData = {
+                    Button = OptionButton,
+                    Name = Value,
+                    IsSelected = false
+                }
+
+                OptionButton:OnHover(function()
+                    if OptionData.IsSelected then return end 
+
+                    OptionButton:Tween({TextColor3 = Library.Theme.Text})
+                end, function()
+                    if OptionData.IsSelected then return end 
+
+                    OptionButton:Tween({TextColor3 = Library.Theme["Inactive Text"]})
+                end)
+                
+                function OptionData:ToggleState(Value)
+                    if Value == "Active" then
+                        OptionButton:ChangeItemTheme({TextColor3 = "Accent"})
+                        OptionButton:Tween({TextColor3 = Library.Theme.Accent})
+                    else
+                        OptionButton:ChangeItemTheme({TextColor3 = "Inactive Text"})
+                        OptionButton:Tween({TextColor3 = Library.Theme["Inactive Text"]})
+                    end
+                end
+
+                function OptionData:Set()
+                    Library:Thread(function()
+                        Items["Value"]:Tween({TextTransparency = 1})
+                        task.wait(0.1)
+                        Items["Value"]:Tween({TextTransparency = 0})
+                    end)
+
+                    OptionData.IsSelected = not OptionData.IsSelected
+
+                    if Dropdown.Multi then 
+                        local Index = table.find(Dropdown.Value, OptionData.Name)
+
+                        if Index then 
+                            table.remove(Dropdown.Value, Index)
+                        else
+                            table.insert(Dropdown.Value, OptionData.Name)
+                        end
+
+                        OptionData:ToggleState(Index and "Inactive" or "Active")
+
+                        Flags[Dropdown.Flag] = Dropdown.Value
+
+                        local TextFormat = #Dropdown.Value > 0 and table.concat(Dropdown.Value, ", ") or "none"
+                        Items["Value"].Instance.Text = TextFormat
+                    else
+                        if OptionData.IsSelected then 
+                            Dropdown.Value = OptionData.Name
+                            Flags[Dropdown.Flag] = OptionData.Name
+
+                            OptionData.IsSelected = true
+                            OptionData:ToggleState("Active")
+
+                            for Index, Value in Dropdown.Options do 
+                                if Value ~= OptionData then
+                                    Value.IsSelected = false 
+                                    Value:ToggleState("Inactive")
+                                end
                             end
 
-                            local Success, Error = Library:LoadConfig(readfile(ThemesFolder .. ThemeSelected .. ".json"))
+                            Items["Value"].Instance.Text = OptionData.Name
+                        else
+                            Dropdown.Value = nil
+                            Flags[Dropdown.Flag] = nil
 
-                            if Success then 
-                                Library:Notification("Loaded theme "..ThemeSelected .. " succesfully", 3, Library.Theme.Accent)
-                            else
-                                Library:Notification("Failed to load theme "..ThemeSelected .. " report this to the devs: "..Error, 3, Color3.fromRGB(255, 0, 0))
-                            end
+                            OptionData.IsSelected = false
+                            OptionData:ToggleState("Inactive")
+
+                            Items["Value"].Instance.Text = "none"
                         end
                     end
-                })
 
-                ThemingSection:Button({
-                    Name = "Delete",
-                    Callback = function()
-                        if ThemeSelected then 
-                            if not isfile(ThemesFolder .. ThemeSelected .. ".json") then
-                                Library:Notification("Theme does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                return
-                            end
+                    Library:SafeCall(Dropdown.Callback, Dropdown.Value)
+                end
 
-                            delfile(ThemesFolder .. ThemeSelected .. ".json")
-                            Library:GetThemesList(ThemesDropdown)
-                            Library:Notification("Deleted theme "..ThemeSelected, 3, Library.Theme.Accent)
+                OptionData.Button:Connect("MouseButton1Down", function()
+                    OptionData:Set()
+                end)
+
+                Dropdown.Options[OptionData.Name] = OptionData
+                return OptionData
+            end
+
+            function Dropdown:Remove(Option)
+                if Dropdown.Options[Option] then
+                    Dropdown.Options[Option].Button.Instance:Destroy()
+                    Dropdown.Options[Option] = nil
+                end
+            end
+
+            function Dropdown:Refresh(List)
+                for Index, Value in Dropdown.Options do 
+                    Dropdown:Remove(Value.Name)
+                end
+
+                for Index, Value in List do 
+                    Dropdown:Add(Value)
+                end
+            end
+
+            function Dropdown:SetText(Text)
+                Items["Text"].Instance.Text = tostring(Text)
+            end
+
+            function Dropdown:SetVisibility(Bool)
+                Items["Dropdown"].Instance.Visible = Bool 
+            end
+
+            local Debounce = false 
+            local OptionHolder = Items["OptionHolder"].Instance
+            local RealDropdown = Items["RealDropdown"].Instance
+
+            local IsSettings = Dropdown.Section and Dropdown.Section.IsSettings
+
+            function Dropdown:SetOpen(Bool)
+                if Debounce then 
+                    return 
+                end
+
+                Dropdown.IsOpen = Bool
+
+                Debounce = true 
+                
+                if Dropdown.IsOpen then 
+                    Items["OptionHolder"].Instance.Visible = true
+
+                    local Scale = Library:GetScreenScale()
+                    OptionHolder.Position = Library:PopupPosition(RealDropdown, OptionHolder, 0)
+                    OptionHolder.Size = UDim2.new(0, RealDropdown.AbsoluteSize.X / Scale, 0, 0)
+                    
+                    Items["OptionHolder"]:Tween({
+                        Position = Library:PopupPosition(RealDropdown, OptionHolder, 10)
+                    })
+                    
+                    Items["OptionHolder"]:FadeDescendants(true, function()
+                        Debounce = false 
+                    end)
+
+                    for Index, Value in Library.OpenFrames do 
+                        if Value ~= IsSettings and not Params.Parent then
+                            Value:SetOpen(false)
                         end
                     end
+
+                    Library.OpenFrames[Dropdown] = Dropdown 
+                else
+                    Items["OptionHolder"]:Tween({
+                        Position = Library:PopupPosition(RealDropdown, OptionHolder, -10)
+                    })
+
+                    Items["OptionHolder"]:FadeDescendants(false, function()
+                        Debounce = false
+                    end)
+
+                    if Library.OpenFrames[Dropdown] then 
+                        Library.OpenFrames[Dropdown] = nil
+                    end
+                end
+
+                local Descendants = OptionHolder:GetDescendants()
+                table.insert(Descendants, OptionHolder)
+
+                for Index, Value in Descendants do 
+                    if Value.ClassName:find("UI") then
+                        continue
+                    end
+
+                    if not Params.Parent then
+                        Value.ZIndex = Dropdown.IsOpen and Library.ZIndexOrder.OptionHolder or 1
+                    else
+                        Value.ZIndex = Dropdown.IsOpen and Library.ZIndexOrder.OptionHolder + 3 or 1
+                    end
+                end
+            end
+
+            Items["OptionHolder"]:VisibleCheck()
+
+            Library:Connect(UserInputService.InputBegan, function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if Dropdown.IsOpen and not Items["OptionHolder"]:IsMouseOverFrame() then
+                        Dropdown:SetOpen(false)
+                    end
+                end
+            end)
+
+            Items["RealDropdown"]:Connect("MouseButton1Down", function()
+                Dropdown:SetOpen(not Dropdown.IsOpen)
+            end)
+
+            for Index, Value in Dropdown.OptionItems do 
+                Dropdown:Add(Value)
+            end
+
+            Dropdown:Set(Dropdown.Default)
+
+            SetFlags[Dropdown.Flag] = function(Value)
+                Dropdown:Set(Value)
+            end
+
+            return setmetatable(Dropdown, Library)
+        end
+
+        Library.List = function(Self, Params)
+            Params = Params or { }
+
+            local List = {
+                OptionItems = Params.Items or Params.items or { },
+                Flag = Params.Flag or Params.flag or (Params.Name or Params.name),
+                Default = Params.Default or Params.default or "",
+                Callback = Params.Callback or Params.callback or function() end,
+                Multi = Params.Multi or Params.multi or false,
+
+                Window = Self.Window,
+                Page = Self.Page,
+                Section = Self,
+
+                Value = { },
+                Options = { },
+                Items = { }
+            }
+
+            local Parent 
+
+            if Params.Parent then 
+                Parent = Params.Parent
+            else
+                Parent = List.Section.Items["Content"]
+            end
+
+            local Items = { } do 
+                Items["List"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Parent.Instance,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 200),
+                    BorderSizePixel = 0
+                })
+                
+                Items["SearchOutline"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["List"].Instance,
+                    Size = UDim2.new(1, 0, 0, 20),
+                    Active = true,
+                    Selectable = true,
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Border"]
+                }):AddToTheme({BackgroundColor3 = 'Border'})
+                
+                Items["SearchInline"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["SearchOutline"].Instance,
+                    Active = true,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Selectable = true,
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Outline"]
+                }):AddToTheme({BackgroundColor3 = 'Outline'})
+                
+                Items["SearchBackground"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["SearchInline"].Instance,
+                    ClipsDescendants = true,
+                    Size = UDim2.new(1, -2, 1, -2),
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Selectable = true,
+                    Active = true,
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Element"]
+                }):AddToTheme({BackgroundColor3 = 'Element'})
+                
+                Library:Create("UIGradient", {
+                    Name = "\0",
+                    Parent = Items["SearchBackground"].Instance,
+                    Rotation = 90,
+                    Color = ColorSequence.new{
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 163, 163))
+                }
+                })
+                
+                Items["Input"] = Library:Create("TextBox", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["SearchBackground"].Instance,
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    PlaceholderColor3 = Library.Theme["Inactive Text"],
+                    PlaceholderText = "Search..",
+                    Size = UDim2.new(1, -8, 0, 0),
+                    TextColor3 = Library.Theme["Text"],
+                    Text = "",
+                    Position = UDim2.new(0, 4, 0.5, -1),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ClearTextOnFocus = false,
+                    AutomaticSize = Enum.AutomaticSize.Y
+                }):AddToTheme({TextColor3 = 'Text', PlaceholderColor3 = 'Inactive Text'})
+                
+                Items["ListOutline"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["List"].Instance,
+                    Position = UDim2.new(0, 0, 0, 25),
+                    Size = UDim2.new(1, 0, 1, -25),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Border"]
+                }):AddToTheme({BackgroundColor3 = 'Border'})
+                
+                Items["ListInline"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["ListOutline"].Instance,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Outline"]
+                }):AddToTheme({BackgroundColor3 = 'Outline'})
+                
+                Items["ListBackground"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["ListInline"].Instance,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Element"]
+                }):AddToTheme({BackgroundColor3 = 'Element'})
+                
+                Library:Create("UIGradient", {
+                    Name = "\0",
+                    Parent = Items["ListBackground"].Instance,
+                    Rotation = 90,
+                    Color = ColorSequence.new{
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 163, 163))
+                }
+                })
+                
+                Items["Holder"] = Library:Create("ScrollingFrame", {
+                    Name = "\0",
+                    Parent = Items["ListBackground"].Instance,
+                    Active = true,
+                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                    BorderSizePixel = 0,
+                    CanvasSize = UDim2.new(0, 0, 0, 0),
+                    ScrollBarImageColor3 = Library.Theme["Accent"],
+                    MidImage = "rbxassetid://81680855285439",
+                    ScrollBarThickness = 2,
+                    Size = UDim2.new(1, -16, 1, -16),
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 8, 0, 8),
+                    BottomImage = "rbxassetid://81680855285439",
+                    TopImage = "rbxassetid://81680855285439"
+                }):AddToTheme({ScrollBarImageColor3 = 'Accent'})
+                
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["Holder"].Instance,
+                    Padding = UDim.new(0, 8),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })
+                
+                Library:Create("UIPadding", {
+                    Name = "\0",
+                    Parent = Items["Holder"].Instance,
+                    PaddingBottom = UDim.new(0, 8)
+                })                
+
+                List.Items = Items 
+            end
+
+            function List:Set(Value)
+                if List.Multi then 
+                    if type(Value) ~= "table" then 
+                        return
+                    end
+
+                    List.Value = Value
+
+                    for Index, Value in Value do
+                        local OptionData = List.Options[Value]
+                         
+                        if not OptionData then
+                            continue
+                        end
+
+                        OptionData.IsSelected = true 
+                        OptionData:ToggleState("Active")
+                    end
+
+                    Flags[List.Flag] = Value
+                else
+                    if not List.Options[Value] then
+                        return
+                    end
+
+                    local OptionData = List.Options[Value]
+
+                    List.Value = Value
+
+                    for Index, Value in List.Options do
+                        if Value ~= OptionData then
+                            Value.IsSelected = false 
+                            Value:ToggleState("Inactive")
+                        else
+                            Value.IsSelected = true 
+                            Value:ToggleState("Active")
+                        end
+                    end
+
+                    Flags[List.Flag] = Value
+                end
+
+                Library:SafeCall(List.Callback, List.Value)
+            end
+
+            function List:Add(Value)
+                local OptionButton = Library:Create("TextButton", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    Parent = Items["Holder"].Instance,
+                    TextColor3 = Library.Theme["Inactive Text"],
+                    Text = Value,
+                    AutoButtonColor = false,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.Y
+                }):AddToTheme({TextColor3 = 'Inactive Text'})
+
+                local OptionData = {
+                    Button = OptionButton,
+                    Name = Value,
+                    IsSelected = false
+                }
+
+                OptionButton:OnHover(function()
+                    if OptionData.IsSelected then return end 
+
+                    OptionButton:Tween({TextColor3 = Library.Theme.Text})
+                end, function()
+                    if OptionData.IsSelected then return end 
+
+                    OptionButton:Tween({TextColor3 = Library.Theme["Inactive Text"]})
+                end)
+                
+                function OptionData:ToggleState(Value)
+                    if Value == "Active" then
+                        OptionButton:ChangeItemTheme({TextColor3 = "Accent"})
+                        OptionButton:Tween({TextColor3 = Library.Theme.Accent})
+                    else
+                        OptionButton:ChangeItemTheme({TextColor3 = "Inactive Text"})
+                        OptionButton:Tween({TextColor3 = Library.Theme["Inactive Text"]})
+                    end
+                end
+
+                function OptionData:Set()
+                    OptionData.IsSelected = not OptionData.IsSelected
+
+                    if List.Multi then 
+                        local Index = table.find(List.Value, OptionData.Name)
+
+                        if Index then 
+                            table.remove(List.Value, Index)
+                        else
+                            table.insert(List.Value, OptionData.Name)
+                        end
+
+                        OptionData:ToggleState(Index and "Inactive" or "Active")
+
+                        Flags[List.Flag] = List.Value
+                    else
+                        if OptionData.IsSelected then 
+                            List.Value = OptionData.Name
+                            Flags[List.Flag] = OptionData.Name
+
+                            OptionData.IsSelected = true
+                            OptionData:ToggleState("Active")
+
+                            for Index, Value in List.Options do 
+                                if Value ~= OptionData then
+                                    Value.IsSelected = false 
+                                    Value:ToggleState("Inactive")
+                                end
+                            end
+                        else
+                            List.Value = nil
+                            Flags[List.Flag] = nil
+
+                            OptionData.IsSelected = false
+                            OptionData:ToggleState("Inactive")
+                        end
+                    end
+
+                    Library:SafeCall(List.Callback, List.Value)
+                end
+
+                OptionData.Button:Connect("MouseButton1Down", function()
+                    OptionData:Set()
+                end)
+
+                List.Options[OptionData.Name] = OptionData
+                return OptionData
+            end
+
+            function List:Remove(Option)
+                if List.Options[Option] then
+                    List.Options[Option].Button.Instance:Destroy()
+                    List.Options[Option] = nil
+                end
+            end
+
+            function List:Refresh(NewList)
+                for Index, Value in List.Options do 
+                    List:Remove(Value.Name)
+                end
+
+                for Index, Value in NewList do 
+                    List:Add(Value)
+                end
+            end
+
+            function List:SetVisibility(Bool)
+                Items["List"].Instance.Visible = Bool 
+            end
+
+            for Index, Value in List.OptionItems do 
+                List:Add(Value)
+            end
+
+            Items["Input"]:Connect("Changed", function(Property)
+                if Property == "Text" then
+                    for Index, Value in List.Options do
+                        if string.find(string.lower(Value.Name), string.lower(Items["Input"].Instance.Text)) then
+                            Value.Button.Instance.Visible = true
+                        else
+                            Value.Button.Instance.Visible = false
+                        end
+                    end
+                end
+            end)
+
+            List:Set(List.Default)
+
+            SetFlags[List.Flag] = function(Value)
+                List:Set(Value)
+            end
+
+            return setmetatable(List, Library)
+        end
+
+        Library.Label = function(Self, Params)
+            Params = Params or { }
+
+            local Label = {
+                Name = Params.Name or Params.name or "Label",
+
+                Window = Self.Window,
+                Page = Self.Page,
+                Section = Self,
+
+                Items = { }
+            }
+
+            local Parent 
+
+            if Params.Parent then 
+                Parent = Params.Parent
+            else
+                Parent = Label.Section.Items["Content"]
+            end
+
+            local Items = { } do 
+                Items["Label"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Parent.Instance,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 12),
+                    BorderSizePixel = 0
+                })
+                
+                Items["Text"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["Label"].Instance,
+                    TextColor3 = Library.Theme["Text"],
+                    Text = Label.Name,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.XY
+                }):AddToTheme({TextColor3 = 'Text'})
+                
+                Items["SubElements"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["Label"].Instance,
+                    AnchorPoint = Vector2.new(1, 0),
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(1, 0, 0, 0),
+                    Size = UDim2.new(0, 0, 1, 0),
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.X
+                })
+                
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["SubElements"].Instance,
+                    VerticalAlignment = Enum.VerticalAlignment.Center,
+                    FillDirection = Enum.FillDirection.Horizontal,
+                    Padding = UDim.new(0, 8),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })                
+
+                Label.Items = Items 
+            end
+
+            function Label:SetVisibility(Bool)
+                Items["Label"].Instance.Visible = Bool 
+            end
+
+            function Label:SetText(Text)
+                Items["Text"].Instance.Text = tostring(Text)
+            end
+
+            function Label:Colorpicker(Data)
+                Data = Data or { }
+
+                local Colorpicker = {
+                    Flag = Data.Flag or Data.flag or (Data.Name or Data.name or Label.Name),
+                    Default = Data.Default or Data.default or Color3.fromRGB(255, 255, 255),
+                    Callback = Data.Callback or Data.callback or function() end,
+                    Alpha = Data.Alpha or Data.alpha or 0,
+
+                    Window = Label.Window,
+                    Page = Label.Page,
+                    Section = Label.Section,
+                }
+
+                local NewColorpicker, ColorpickerItems = Library:CreateColorpicker({
+                    Parent = Items["SubElements"],
+                    Page = Colorpicker.Page,
+                    Section = Colorpicker.Section,
+                    Flag = Colorpicker.Flag,
+                    Default = Colorpicker.Default,
+                    Callback = Colorpicker.Callback,
+                    Alpha = Colorpicker.Alpha
                 })
 
-                Library:GetThemesList(ThemesDropdown)
+                return NewColorpicker
+            end
+
+            function Label:Keybind(Data)
+                Data = Data or { }
+
+                local Keybind = {
+                    Name = Data.Name or Data.name or Label.Name,
+                    Flag = Data.Flag or Data.flag or (Data.Name or Data.name or Label.Name),
+                    Default = Data.Default or Data.default or nil,
+                    Callback = Data.Callback or Data.callback or function() end,
+                    Mode = Data.Mode or Data.mode or "Toggle",
+
+                    Window = Label.Window,
+                    Page = Label.Page,
+                    Section = Label.Section,
+                }
+
+                local NewKeybind, KeybindItems = Library:CreateKeybind({
+                    Parent = Items["SubElements"],
+                    Name = Keybind.Name,
+                    Page = Keybind.Page,
+                    Section = Keybind.Section,
+                    Flag = Keybind.Flag,
+                    Default = Keybind.Default,
+                    Mode = Keybind.Mode,
+                    Callback = Keybind.Callback
+                })
+
+                return NewKeybind
+            end
+
+            Label:SetText(Label.Name)
+
+            return setmetatable(Label, Library)
+        end
+
+        Library.Textbox = function(Self, Params)
+            Params = Params or { }
+
+            local Textbox = {
+                Name = Params.Name or Params.name or "Textbox",
+                Flag = Params.Flag or Params.flag or (Params.Name or Params.name),
+                Default = Params.Default or Params.default or "",
+                Callback = Params.Callback or Params.callback or function() end,
+                Finished = Params.Finished or Params.finished or false,
+                Placeholder = Params.Placeholder or Params.placeholder or "",
+                Numeric = Params.Numeric or Params.numeric or false,
+
+                Window = Self.Window,
+                Page = Self.Page,
+                Section = Self,
+                Value = "",
+
+                Items = { },
+            }
+
+            local Parent 
+
+            if Params.Parent then 
+                Parent = Params.Parent
+            else
+                Parent = Textbox.Section.Items["Content"]
+            end
+
+            local Items = { } do 
+                Items["Textbox"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Parent.Instance,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 40),
+                    BorderSizePixel = 0
+                })
+                
+                Items["Text"] = Library:Create("TextLabel", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["Textbox"].Instance,
+                    TextColor3 = Library.Theme["Text"],
+                    Text = Textbox.Name,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutomaticSize = Enum.AutomaticSize.XY
+                }):AddToTheme({TextColor3 = 'Text'})
+                
+                Items["Outline"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["Textbox"].Instance,
+                    Active = true,
+                    AnchorPoint = Vector2.new(0, 1),
+                    Position = UDim2.new(0, 0, 1, 0),
+                    Size = UDim2.new(1, 0, 0, 20),
+                    Selectable = true,
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Border"]
+                }):AddToTheme({BackgroundColor3 = 'Border'})
+                
+                Items["Inline"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["Outline"].Instance,
+                    Active = true,
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Selectable = true,
+                    Size = UDim2.new(1, -2, 1, -2),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Outline"]
+                }):AddToTheme({BackgroundColor3 = 'Outline'})
+                
+                Items["Background"] = Library:Create("Frame", {
+                    Name = "\0",
+                    Parent = Items["Inline"].Instance,
+                    ClipsDescendants = true,
+                    Size = UDim2.new(1, -2, 1, -2),
+                    Position = UDim2.new(0, 1, 0, 1),
+                    Selectable = true,
+                    Active = true,
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = Library.Theme["Element"]
+                }):AddToTheme({BackgroundColor3 = 'Element'})
+                
+                Library:Create("UIGradient", {
+                    Name = "\0",
+                    Parent = Items["Background"].Instance,
+                    Rotation = 90,
+                    Color = ColorSequence.new{
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 163, 163))
+                }
+                })
+                
+                Items["Input"] = Library:Create("TextBox", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["Background"].Instance,
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    PlaceholderColor3 = Library.Theme["Inactive Text"],
+                    PlaceholderText = Textbox.Placeholder,
+                    Size = UDim2.new(1, -8, 0, 0),
+                    TextColor3 = Library.Theme["Text"],
+                    Text = "",
+                    Position = UDim2.new(0, 4, 0.5, -1),
+                    BorderSizePixel = 0,
+                    BackgroundTransparency = 1,
+                    CursorPosition = -1,
+                    ClearTextOnFocus = false,
+                    AutomaticSize = Enum.AutomaticSize.Y
+                }):AddToTheme({TextColor3 = 'Text', PlaceholderColor3 = 'Inactive Text'})                
+
+                Textbox.Items = Items
+            end
+
+            Items["Background"]:OnHover(function()
+                Items["Background"]:Tween({BackgroundColor3 = Library.Theme["Hovered Element"]})
+            end, function()
+                Items["Background"]:Tween({BackgroundColor3 = Library.Theme.Element})
+            end)
+
+            function Textbox:SetVisibility(Bool)
+                Items["Textbox"].Instance.Visible = Bool
+            end
+
+            function Textbox:SetText(Text)
+                Items["Text"].Instance.Text = tostring(Text)
+            end
+
+            function Textbox:Set(Value)
+                if Textbox.Numeric and string.len(tostring(Value)) > 0 and not tonumber(Value) then
+                    Value = Textbox.Value
+                end
+
+                Textbox.Value = Value
+                Items["Input"].Instance.Text = Value
+                Flags[Textbox.Flag] = Value
+
+                Library:SafeCall(Textbox.Callback, Value)
+            end
+
+            if Textbox.Finished then 
+                Items["Input"]:Connect("FocusLost", function(Bool)
+                    if Bool then
+                        Textbox:Set(Items["Input"].Instance.Text)
+                    end
+                end)
+            else
+                Items["Input"]:Connect("Changed", function(Property)
+                    if Property == "Text" then
+                        Textbox:Set(Items["Input"].Instance.Text)
+                    end
+                end)
+            end
+
+            Textbox:Set(Textbox.Default)
+
+            SetFlags[Textbox.Flag] = function(Value)
+                Textbox:Set(Value)
             end
             
-            local MenuSection = SettingsPage:Section({Name = "Menu", Side = 2}) do
-                MenuSection:Button({Name = "Exit", Callback = function()
-                    Library:Exit()
-                end})
+            return setmetatable(Textbox, Library)
+        end
 
-                -- 🔧 CORREÇÃO: Callback do Menu Keybind atualiza a variável global
-                MenuSection:Label({ Name = "Menu Keybind" }):Keybind({
-                    Name = "Menu Keybind",
-                    Flag = "MenuKeybind",
-                    Default = Library.MenuKeybind,
-                    Mode = "Toggle",
-                    Callback = function(Value)
-                        Library.MenuKeybind = Library.Flags["MenuKeybind"].Key
+        Library.Init = function(Self)
+            local SettingsPage = Self:Page({Name = "settings"}) do 
+                local ThemingSection = SettingsPage:Section({Name = "Theming", Side = 2}) do
+                    for Index, Value in Library.Theme do 
+                        ThemingSection:Label({Name = Index}):Colorpicker({
+                            Name = Index,
+                            Flag = Index.."Theming",
+                            Default = Value,
+                            Callback = function(Value)
+                                Library.Theme[Index] = Value
+                                Library:ChangeTheme(Index, Value)
+                            end
+                        })
                     end
-                })
 
-                if Self.Watermark then
-                    MenuSection:Toggle({
-                        Name = "Watermark",
-                        Flag = "Watermark",
-                        Default = true,
+                    local ThemeSelected 
+                    local ThemeName
+                    local ThemesFolder = Library.Directory .. Library.Folders.Themes .. "/"
+
+                    local ThemesDropdown = ThemingSection:Dropdown({
+                        Name = "Themes",
+                        Flag = "Themes",
+                        Default = "",
+                        Items = { },
                         Callback = function(Value)
-                            Self.Watermark:SetVisibility(Value)
+                            ThemeSelected = Value
+                        end
+                    })
+
+                    ThemingSection:Textbox({
+                        Name = "Theme name",
+                        Flag = "ThemeName",
+                        Default = "",
+                        Callback = function(Value)
+                            ThemeName = Value
+                        end
+                    })
+
+                    ThemingSection:Button({
+                        Name = "Save",
+                        Callback = function()
+                            if ThemeName then 
+                                if ThemeName == "" then 
+                                    return
+                                end
+
+                                if isfile(ThemesFolder .. ThemeName .. ".json") then 
+                                    Library:Notification("Saved theme "..ThemeName, 3, Library.Theme.Accent)
+                                    writefile(ThemesFolder .. ThemeName .. ".json", Library:GetConfig())
+                                    return
+                                end
+
+                                writefile(ThemesFolder .. ThemeName .. ".json", Library:GetConfig())
+                                Library:GetThemesList(ThemesDropdown)
+                                Library:Notification("Created theme "..ThemeName, 3, Library.Theme.Accent)
+                            end
+                        end
+                    })
+
+                    ThemingSection:Button({
+                        Name = "Load",
+                        Callback = function()
+                            if ThemeSelected then 
+                                if not isfile(ThemesFolder .. ThemeSelected .. ".json") then
+                                    Library:Notification("Theme does not exist", 3, Color3.fromRGB(255, 0, 0))
+                                    return
+                                end
+
+                                local Success, Error = Library:LoadConfig(readfile(ThemesFolder .. ThemeSelected .. ".json"))
+
+                                if Success then 
+                                    Library:Notification("Loaded theme "..ThemeSelected .. " succesfully", 3, Library.Theme.Accent)
+                                else
+                                    Library:Notification("Failed to load theme "..ThemeSelected .. " report this to the devs: "..Error, 3, Color3.fromRGB(255, 0, 0))
+                                end
+                            end
+                        end
+                    })
+
+                    ThemingSection:Button({
+                        Name = "Delete",
+                        Callback = function()
+                            if ThemeSelected then 
+                                if not isfile(ThemesFolder .. ThemeSelected .. ".json") then
+                                    Library:Notification("Theme does not exist", 3, Color3.fromRGB(255, 0, 0))
+                                    return
+                                end
+
+                                delfile(ThemesFolder .. ThemeSelected .. ".json")
+                                Library:GetThemesList(ThemesDropdown)
+                                Library:Notification("Deleted theme "..ThemeSelected, 3, Library.Theme.Accent)
+                            end
+                        end
+                    })
+
+                    Library:GetThemesList(ThemesDropdown)
+                end
+                
+                local MenuSection = SettingsPage:Section({Name = "Menu", Side = 2}) do
+                    MenuSection:Button({Name = "Exit", Callback = function()
+                        Library:Exit()
+                    end})
+
+                    -- 🔥 CORREÇÃO: Callback do Menu Keybind atualiza a variável global
+                    MenuSection:Label({ Name = "Menu Keybind" }):Keybind({
+                        Name = "Menu Keybind",
+                        Flag = "MenuKeybind",
+                        Default = Library.MenuKeybind,
+                        Mode = "Toggle",
+                        Callback = function(Value)
+                            Library.MenuKeybind = Library.Flags["MenuKeybind"].Key
+                        end
+                    })
+
+                    if Self.Watermark then
+                        MenuSection:Toggle({
+                            Name = "Watermark",
+                            Flag = "Watermark",
+                            Default = true,
+                            Callback = function(Value)
+                                Self.Watermark:SetVisibility(Value)
+                            end
+                        })
+                    end
+
+                    if Self.KeybindList then 
+                        MenuSection:Toggle({
+                            Name = "Keybind list",
+                            Flag = "Keybind list",
+                            Default = true,
+                            Callback = function(Value)
+                                Self.KeybindList:SetVisibility(Value)
+                            end
+                        })
+                    end
+                end
+
+                local ConfigName 
+                local ConfigSelected 
+                local ConfigsFolder = Library.Directory .. Library.Folders.Configs .. "/"
+
+                local ConfigsSection = SettingsPage:Section({Name = "Profiles", Side = 1}) do
+                    local ConfigsList = ConfigsSection:List({
+                        Flag = "Configs",
+                        Items = { },
+                        Multi = false,
+                        Callback = function(Value)
+                            ConfigSelected = Value
+                        end
+                    })
+
+                    ConfigsSection:Textbox({
+                        Name = "Config name",
+                        Flag = "ConfigName",
+                        Placeholder = "Config name",
+                        Callback = function(Value)
+                            ConfigName = Value 
+                        end
+                    })
+
+                    ConfigsSection:Button({
+                        Name = "Create",
+                        Callback = function()
+                            if ConfigName then 
+                                if ConfigName == "" then 
+                                    return
+                                end
+
+                                if isfile(ConfigsFolder .. ConfigName .. ".json") then 
+                                    Library:Notification("Config with the name "..ConfigName.." already exists", 3, Color3.fromRGB(255, 0, 0))
+                                    return
+                                end
+
+                                writefile(ConfigsFolder .. ConfigName .. ".json", Library:GetConfig())
+                                Library:GetConfigsList(ConfigsList)
+                                Library:Notification("Created config "..ConfigName, 3, Library.Theme.Accent)
+                            end
+                        end
+                    })
+
+                    ConfigsSection:Button({
+                        Name = "Load",
+                        Callback = function()
+                            if ConfigSelected then 
+                                if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
+                                    Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
+                                    return
+                                end
+
+                                local Success, Error = Library:LoadConfig(readfile(ConfigsFolder .. ConfigSelected .. ".json"))
+
+                                if Success then 
+                                    Library:Notification("Loaded config "..ConfigSelected .. " succesfully", 3, Library.Theme.Accent)
+                                else
+                                    Library:Notification("Failed to load config "..ConfigSelected .. " report this to the devs: "..Error, 3, Color3.fromRGB(255, 0, 0))
+                                end
+                            end
+                        end
+                    })
+
+                    ConfigsSection:Button({
+                        Name = "Delete",
+                        Callback = function()
+                            if ConfigSelected then 
+                                if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
+                                    Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
+                                    return
+                                end
+
+                                delfile(ConfigsFolder .. ConfigSelected .. ".json")
+                                Library:GetConfigsList(ConfigsList)
+                                Library:Notification("Deleted config "..ConfigSelected, 3, Library.Theme.Accent)
+                            end
+                        end
+                    })
+
+                    ConfigsSection:Button({
+                        Name = "Overwrite",
+                        Callback = function()
+                            if ConfigSelected then 
+                                if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
+                                    Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
+                                    return
+                                end
+
+                                writefile(ConfigsFolder .. ConfigSelected .. ".json", Library:GetConfig())
+                                Library:Notification("Overwrote config "..ConfigSelected, 3, Library.Theme.Accent)
+                            end
+                        end
+                    })
+
+                    Library:GetConfigsList(ConfigsList)
+                end
+
+                local AutoloadSection = SettingsPage:Section({Name = "Autoload", Side = 1}) do
+                    AutoloadSection:Button({
+                        Name = "Set selected as autoload",
+                        Callback = function()
+                            if ConfigSelected then 
+                                if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
+                                    Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
+                                    return
+                                end
+
+                                writefile(Library.Directory .. "/autoload.json", readfile(ConfigsFolder .. ConfigSelected .. ".json"))
+                                Library:Notification("Set config "..ConfigSelected.." as autoload", 3, Library.Theme.Accent)
+                            end
+                        end
+                    })
+
+                    AutoloadSection:Button({
+                        Name = "Remove autoload",
+                        Callback = function()
+                            writefile(Library.Directory .. "/autoload.json", "")
+                            Library:Notification("Removed autoload", 3, Library.Theme.Accent)
                         end
                     })
                 end
 
-                if Self.KeybindList then 
-                    MenuSection:Toggle({
-                        Name = "Keybind list",
-                        Flag = "Keybind list",
-                        Default = true,
-                        Callback = function(Value)
-                            Self.KeybindList:SetVisibility(Value)
-                        end
-                    })
+                local AutoloadContent = readfile(Library.Directory .. "/autoload.json")
+
+                if AutoloadContent ~= "" then 
+                    Library:LoadConfig(AutoloadContent)
                 end
-            end
-
-            local ConfigName 
-            local ConfigSelected 
-            local ConfigsFolder = Library.Directory .. Library.Folders.Configs .. "/"
-
-            local ConfigsSection = SettingsPage:Section({Name = "Profiles", Side = 1}) do
-                local ConfigsList = ConfigsSection:List({
-                    Flag = "Configs",
-                    Items = { },
-                    Multi = false,
-                    Callback = function(Value)
-                        ConfigSelected = Value
-                    end
-                })
-
-                ConfigsSection:Textbox({
-                    Name = "Config name",
-                    Flag = "ConfigName",
-                    Placeholder = "Config name",
-                    Callback = function(Value)
-                        ConfigName = Value 
-                    end
-                })
-
-                ConfigsSection:Button({
-                    Name = "Create",
-                    Callback = function()
-                        if ConfigName then 
-                            if ConfigName == "" then 
-                                return
-                            end
-
-                            if isfile(ConfigsFolder .. ConfigName .. ".json") then 
-                                Library:Notification("Config with the name "..ConfigName.." already exists", 3, Color3.fromRGB(255, 0, 0))
-                                return
-                            end
-
-                            writefile(ConfigsFolder .. ConfigName .. ".json", Library:GetConfig())
-                            Library:GetConfigsList(ConfigsList)
-                            Library:Notification("Created config "..ConfigName, 3, Library.Theme.Accent)
-                        end
-                    end
-                })
-
-                ConfigsSection:Button({
-                    Name = "Load",
-                    Callback = function()
-                        if ConfigSelected then 
-                            if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
-                                Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                return
-                            end
-
-                            local Success, Error = Library:LoadConfig(readfile(ConfigsFolder .. ConfigSelected .. ".json"))
-
-                            if Success then 
-                                Library:Notification("Loaded config "..ConfigSelected .. " succesfully", 3, Library.Theme.Accent)
-                            else
-                                Library:Notification("Failed to load config "..ConfigSelected .. " report this to the devs: "..Error, 3, Color3.fromRGB(255, 0, 0))
-                            end
-                        end
-                    end
-                })
-
-                ConfigsSection:Button({
-                    Name = "Delete",
-                    Callback = function()
-                        if ConfigSelected then 
-                            if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
-                                Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                return
-                            end
-
-                            delfile(ConfigsFolder .. ConfigSelected .. ".json")
-                            Library:GetConfigsList(ConfigsList)
-                            Library:Notification("Deleted config "..ConfigSelected, 3, Library.Theme.Accent)
-                        end
-                    end
-                })
-
-                ConfigsSection:Button({
-                    Name = "Overwrite",
-                    Callback = function()
-                        if ConfigSelected then 
-                            if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
-                                Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                return
-                            end
-
-                            writefile(ConfigsFolder .. ConfigSelected .. ".json", Library:GetConfig())
-                            Library:Notification("Overwrote config "..ConfigSelected, 3, Library.Theme.Accent)
-                        end
-                    end
-                })
-
-                Library:GetConfigsList(ConfigsList)
-            end
-
-            local AutoloadSection = SettingsPage:Section({Name = "Autoload", Side = 1}) do
-                AutoloadSection:Button({
-                    Name = "Set selected as autoload",
-                    Callback = function()
-                        if ConfigSelected then 
-                            if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
-                                Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                return
-                            end
-
-                            writefile(Library.Directory .. "/autoload.json", readfile(ConfigsFolder .. ConfigSelected .. ".json"))
-                            Library:Notification("Set config "..ConfigSelected.." as autoload", 3, Library.Theme.Accent)
-                        end
-                    end
-                })
-
-                AutoloadSection:Button({
-                    Name = "Remove autoload",
-                    Callback = function()
-                        writefile(Library.Directory .. "/autoload.json", "")
-                        Library:Notification("Removed autoload", 3, Library.Theme.Accent)
-                    end
-                })
-            end
-
-            local AutoloadContent = readfile(Library.Directory .. "/autoload.json")
-
-            if AutoloadContent ~= "" then 
-                Library:LoadConfig(AutoloadContent)
             end
         end
     end
+end
+
+-- Inicializa o flag MenuKeybind caso não exista
+if not Library.Flags["MenuKeybind"] then
+    Library.Flags["MenuKeybind"] = { Key = Library.MenuKeybind, Mode = "Toggle", Toggled = false }
 end
 
 getgenv().Library = Library
