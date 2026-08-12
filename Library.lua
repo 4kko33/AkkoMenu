@@ -13,7 +13,7 @@
     Please give credit if used or modified.
 ]]
 
-if getgenv().Library then
+if getgenv().Library and type(getgenv().Library.Exit) == "function" then
     getgenv().Library:Exit()
 end
 
