@@ -1,5 +1,5 @@
 local menu
-local MenuName = isfile("bitchbot/menuname.txt") and readfile("bitchbot/menuname.txt") or nil
+local MenuName = isfile("Akko.farm/menuname.txt") and readfile("Akko.farm/menuname.txt") or nil
 local loadstart = tick()
 
 local function map(X, A, B, C, D)
@@ -517,27 +517,27 @@ NETWORK:SetOutgoingKBPSLimit(0)
 
 setfpscap(maxfps or 144)
 
-if not isfolder("bitchbot") then
-	makefolder("bitchbot")
-	if not isfile("bitchbot/relations.bb") then
-		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
+if not isfolder("Akko.farm") then
+	makefolder("Akko.farm")
+	if not isfile("Akko.farm/relations.bb") then
+		writefile("Akko.farm/relations.bb", "bb:{{friends:}{priority:}")
 	end
 else
-	if not isfile("bitchbot/relations.bb") then
-		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
+	if not isfile("Akko.farm/relations.bb") then
+		writefile("Akko.farm/relations.bb", "bb:{{friends:}{priority:}")
 	end
-	writefile("bitchbot/debuglog.bb", "")
+	writefile("Akko.farm/debuglog.bb", "")
 end
 
-if not isfolder("bitchbot/" .. menu.game) then
-	makefolder("bitchbot/" .. menu.game)
+if not isfolder("Akko.farm/" .. menu.game) then
+	makefolder("Akko.farm/" .. menu.game)
 end
 
 local configs = {}
 
 local function GetConfigs()
 	local result = {}
-	local directory = "bitchbot\\" .. menu.game
+	local directory = "Akko.farm\\" .. menu.game
 	for k, v in pairs(listfiles(directory)) do
 		local clipped = v:sub(#directory + 2)
 		if clipped:sub(#clipped - 2) == ".bb" then
@@ -547,7 +547,7 @@ local function GetConfigs()
 		end
 	end
 	if #result <= 0 then
-		writefile("bitchbot/" .. menu.game .. "/Default.bb", "")
+		writefile("Akko.farm/" .. menu.game .. "/Default.bb", "")
 	end
 	return result
 end
@@ -556,14 +556,14 @@ local Players = game:GetService("Players")
 local stats = game:GetService("Stats")
 
 local function UnpackRelations()
-	local str = isfile("bitchbot/relations.bb") and readfile("bitchbot/relations.bb") or nil
+	local str = isfile("Akko.farm/relations.bb") and readfile("Akko.farm/relations.bb") or nil
 	local final = {
 		friends = {},
 		priority = {},
 	}
 	if str then
 		if str:find("bb:{{") then
-			writefile("bitchbot/relations.bb", "friends:\npriority:")
+			writefile("Akko.farm/relations.bb", "friends:\npriority:")
 			return
 		end
 
@@ -639,7 +639,7 @@ local function WriteRelations()
 		end
 	end
 
-	writefile("bitchbot/relations.bb", str)
+	writefile("Akko.farm/relations.bb", str)
 end
 CreateThread(function()
 	if (not menu or not menu.GetVal) then
@@ -2838,7 +2838,7 @@ function menu.Initialize(menutable)
 	local buttonsInQue = {}
 
 	local function SaveCurSettings() --ANCHOR figgies
-		local figgy = "BitchBot v2\nmade with <3 by nata and bitch\n\n" -- screw zarzel XD (and json and classy)
+		local figgy = "Akko.farm v2\nmade with <3 by nata and bitch\n\n" -- screw zarzel XD (and json and classy)
 
 		for k, v in next, menuElementTypes do
 			figgy ..= v .. "s {\n"
@@ -2962,7 +2962,7 @@ function menu.Initialize(menutable)
 			table.insert(lines, s)
 		end
 
-		if lines[1] == "BitchBot v2" then
+		if lines[1] == "Akko.farm v2" then
 			local start = nil
 			for i, v in next, lines do
 				if v == "toggles {" then
@@ -3285,7 +3285,7 @@ function menu.Initialize(menutable)
 	function menu.saveconfig()
 		local figgy = SaveCurSettings()
 		writefile(
-			"bitchbot/"
+			"Akko.farm/"
 				.. menu.game
 				.. "/"
 				.. menu.options["Settings"]["Configuration"]["ConfigName"][1]
@@ -3297,7 +3297,7 @@ function menu.Initialize(menutable)
 	end
 	
 	function menu.loadconfig()
-		local configname = "bitchbot/"
+		local configname = "Akko.farm/"
 			.. menu.game
 			.. "/"
 			.. menu.options["Settings"]["Configuration"]["ConfigName"][1]
