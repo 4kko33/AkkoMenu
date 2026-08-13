@@ -1,3 +1,63 @@
+-- Inicialização Global Robusta v14
+getgenv().Library = getgenv().Library or {}
+local Library = getgenv().Library
+
+Library.Flags = Library.Flags or {}
+Library.SetFlags = Library.SetFlags or {}
+Library.ThemingStuff = Library.ThemingStuff or {}
+-- Registro de componentes usados pelo sistema de temas.
+-- Sem esta tabela, AddToTheme tenta indexar nil com o objeto Instance.
+Library.ThemeMap = Library.ThemeMap or {}
+Library.Connections = Library.Connections or {}
+Library.Threads = Library.Threads or {}
+Library.Notifications = Library.Notifications or {}
+Library.OpenFrames = Library.OpenFrames or {}
+Library.MenuScale = Library.MenuScale or 1
+Library.AnimatedTitle = Library.AnimatedTitle == nil and true or Library.AnimatedTitle
+Library.SelectedTheme = Library.SelectedTheme or "Preset"
+Library.NotificationPosition = Library.NotificationPosition or "Left"
+Library.Directory = Library.Directory or "juanitaaaaaaa"
+Library.FontSize = Library.FontSize or 12
+
+Library.Folders = Library.Folders or {
+    Assets = "/Assets",
+    Configs = "/Configs",
+    Themes = "/Themes"
+}
+
+Library.Animation = Library.Animation or {
+    Time = 0.3,
+    Style = "Quint",
+    Direction = "Out"
+}
+
+Library.TabAnimation = Library.TabAnimation or {
+    Time = 1,
+    Style = "Exponential",
+    Direction = "Out"
+}
+
+Library.ColorpickerAnimation = Library.ColorpickerAnimation or {
+    Time = 0.55,
+    Style = "Exponential",
+    Direction = "Out"
+}
+
+Library.NotifAnimation = Library.NotifAnimation or {
+    Time = 0.85,
+    Style = "Exponential",
+    Direction = "Out"
+}
+
+Library.ZIndexOrder = Library.ZIndexOrder or {
+    ["OptionHolder"] = 4,
+    ["KeybindWindow"] = 4,
+    ["ColorpickerWindow"] = 6
+}
+
+local Flags = Library.Flags
+local SetFlags = Library.SetFlags
+
 --[[
     Code is not as clean as it could be but it works
     
@@ -39,72 +99,11 @@ local IsMobile = UserInputService.TouchEnabled or false
 local GuiInset = GuiService:GetGuiInset().Y
 local Mouse = cloneref(LocalPlayer:GetMouse())
 
-local Library = { 
-    Flags = { },
-    MenuKeybind = "RightShift", -- agora armazena o nome da tecla (ex: "RightShift")
-
-    Directory = "juanitaaaaaaa",
-    Folders = {
-        Assets = "/Assets",
-        Configs = "/Configs",
-        Themes = "/Themes"
-    },
-
-    FontSize = 12,
-
-    Animation = {
-        Time = 0.3,
-        Style = "Quint",
-        Direction = "Out"
-    },
-
-    TabAnimation = {
-        Time = 1,
-        Style = "Exponential",
-        Direction = "Out"
-    },
-
-    ColorpickerAnimation = {
-        Time = 0.55,
-        Style = "Exponential",
-        Direction = "Out"
-    },
-
-    NotifAnimation = {
-        Time = 0.85,
-        Style = "Exponential",
-        Direction = "Out"
-    },
-
-    ZIndexOrder = {
-        ["OptionHolder"] = 4,
-        ["KeybindWindow"] = 4,
-        ["ColorpickerWindow"] = 6
-    },
-
-    Threads = { },
-    Connections = { },
-    SetFlags = { },
-
-    ThemingStuff = { },
-    ThemeMap = { },
-
-    OpenFrames = { },
-
-    Holder = nil,
-    UnusedHolder = nil,
-
-    Font = nil,
-
-    Notifications = { },
-    KeyList = nil,
-
-    Theme = nil,
-} do 
+do 
     Library.__index = Library
 
-    local Flags = Library.Flags 
-    local SetFlags = Library.SetFlags
+    -- Flags já definidas globalmente 
+    -- SetFlags já definidas globalmente
 
     local Keys = {
         ["Unknown"]           = "Unknown",
@@ -195,7 +194,7 @@ local Library = {
         writefile(Library.Directory .. "/autoload.json", "")
     end
 
-    local Themes = {
+        local Themes = {
         ["Preset"] = {
             ["Border"] = Color3.fromRGB(3, 3, 3),
             ["Outline"] = Color3.fromRGB(51, 51, 51),
@@ -207,6 +206,54 @@ local Library = {
             ["Element"] = Color3.fromRGB(39, 39, 39),
             ["Element 2"] = Color3.fromRGB(56, 56, 56),
             ["Hovered Element"] = Color3.fromRGB(61, 61, 61)
+        },
+        ["Magma"] = {
+            ["Border"] = Color3.fromRGB(20, 5, 5),
+            ["Outline"] = Color3.fromRGB(180, 50, 20),
+            ["Background"] = Color3.fromRGB(14, 8, 8),
+            ["Inline"] = Color3.fromRGB(22, 12, 12),
+            ["Accent"] = Color3.fromRGB(255, 100, 30),
+            ["Text"] = Color3.fromRGB(255, 230, 220),
+            ["Inactive Text"] = Color3.fromRGB(140, 110, 105),
+            ["Element"] = Color3.fromRGB(35, 18, 15),
+            ["Element 2"] = Color3.fromRGB(55, 28, 22),
+            ["Hovered Element"] = Color3.fromRGB(75, 38, 30)
+        },
+        ["Navy"] = {
+            ["Border"] = Color3.fromRGB(5, 8, 15),
+            ["Outline"] = Color3.fromRGB(40, 80, 160),
+            ["Background"] = Color3.fromRGB(10, 12, 18),
+            ["Inline"] = Color3.fromRGB(16, 20, 30),
+            ["Accent"] = Color3.fromRGB(70, 130, 255),
+            ["Text"] = Color3.fromRGB(220, 235, 255),
+            ["Inactive Text"] = Color3.fromRGB(110, 120, 140),
+            ["Element"] = Color3.fromRGB(22, 28, 42),
+            ["Element 2"] = Color3.fromRGB(32, 42, 65),
+            ["Hovered Element"] = Color3.fromRGB(42, 55, 85)
+        },
+        ["Sand"] = {
+            ["Border"] = Color3.fromRGB(20, 18, 15),
+            ["Outline"] = Color3.fromRGB(150, 130, 95),
+            ["Background"] = Color3.fromRGB(18, 16, 14),
+            ["Inline"] = Color3.fromRGB(26, 23, 20),
+            ["Accent"] = Color3.fromRGB(210, 180, 130),
+            ["Text"] = Color3.fromRGB(245, 240, 230),
+            ["Inactive Text"] = Color3.fromRGB(140, 130, 120),
+            ["Element"] = Color3.fromRGB(40, 36, 32),
+            ["Element 2"] = Color3.fromRGB(60, 54, 48),
+            ["Hovered Element"] = Color3.fromRGB(75, 68, 60)
+        },
+        ["Sky"] = {
+            ["Border"] = Color3.fromRGB(5, 15, 20),
+            ["Outline"] = Color3.fromRGB(60, 140, 200),
+            ["Background"] = Color3.fromRGB(10, 16, 22),
+            ["Inline"] = Color3.fromRGB(16, 24, 34),
+            ["Accent"] = Color3.fromRGB(90, 180, 255),
+            ["Text"] = Color3.fromRGB(225, 240, 255),
+            ["Inactive Text"] = Color3.fromRGB(115, 135, 150),
+            ["Element"] = Color3.fromRGB(24, 36, 50),
+            ["Element 2"] = Color3.fromRGB(36, 52, 72),
+            ["Hovered Element"] = Color3.fromRGB(48, 68, 94)
         }
     }
 
@@ -273,39 +320,49 @@ local Library = {
     Library.Create = function(Self, Class, Properties)
         local Data = {
             Class = Class,
-            Properties = Properties,
+            Properties = Properties or {},
             Instance = Instance.new(Class)
         }
 
-        for Index, Property in Properties do 
-            if Property == "FontFace" then
-                Data.Instance[Property] = Library.Font
+        for Index, Value in pairs(Data.Properties) do
+            if Index == "FontFace" then
+                pcall(function() Data.Instance.FontFace = Library.Font end)
                 continue
             end
 
-            if Property == "TextSize" then 
-                Data.Instance[Property] = Library.FontSize
+            if Index == "TextSize" then
+                pcall(function() Data.Instance.TextSize = Library.FontSize end)
                 continue
             end
 
-            if Property == "Name" then 
-                Data.Instance[Property] = "\0"
+            if Index == "Name" then
+                pcall(function() Data.Instance.Name = "\0" end)
                 continue
             end
 
-            if Class == "TextButton" then 
-                if Property == "AutoButtonColor" then 
-                    Data.Instance[Property] = false
+            if Class == "TextButton" then
+                if Index == "AutoButtonColor" then
+                    pcall(function() Data.Instance.AutoButtonColor = false end)
                     continue
                 end
-
-                if Property == "Text" then 
-                    Data.Instance[Property] = ""
+                if Index == "Text" then
+                    pcall(function() Data.Instance.Text = tostring(Value or "") end)
                     continue
                 end
             end
 
-            Data.Instance[Index] = Property
+            -- Parent last-ish is fine; pcall so CoreGui restrictions don't kill Create
+            local ok, err = pcall(function()
+                Data.Instance[Index] = Value
+            end)
+            if not ok and Index == "Parent" then
+                -- fallback parents for ScreenGui / frames
+                pcall(function()
+                    local lp = game:GetService("Players").LocalPlayer
+                    local pg = lp and (lp:FindFirstChild("PlayerGui") or lp:WaitForChild("PlayerGui", 2))
+                    if pg then Data.Instance.Parent = pg end
+                end)
+            end
         end
 
         return setmetatable(Data, Library)
@@ -755,39 +812,50 @@ local Library = {
     end
 
     Library.AddToTheme = function(Self, Properties)
+        if not Self or not Self.Instance then
+            warn("[Library] AddToTheme called with nil Self/Instance")
+            return Self
+        end
         local Object = Self.Instance
 
         local ThemeData = {
             Item = Object,
-            Properties = Properties,
+            Properties = Properties or {},
         }
 
-        for Property, Value in ThemeData.Properties do
+        for Property, Value in pairs(ThemeData.Properties) do
             if type(Value) == "string" then
-                if not Library.Theme[Value] then
-                    Object[Property] = Value 
+                if Library.Theme[Value] then
+                    pcall(function() Object[Property] = Library.Theme[Value] end)
+                else
+                    pcall(function() Object[Property] = Value end)
                 end
-
-                Object[Property] = Library.Theme[Value]
-            else
-                Object[Property] = Value()
+            elseif type(Value) == "function" then
+                pcall(function() Object[Property] = Value() end)
             end
         end
 
         table.insert(Library.ThemingStuff, ThemeData)
+
+        -- Protege também contra uma limpeza externa de ThemeMap.
+        Library.ThemeMap = Library.ThemeMap or {}
         Library.ThemeMap[Object] = ThemeData
         return Self
     end
 
     Library.ChangeItemTheme = function(Self, Properties)
-        local Object = Self.Instance
-
-        if not Library.ThemeMap[Object] then 
-            return
+        if not Self or not Self.Instance then
+            return Self
         end
 
-        Library.ThemeMap[Object].Properties = Properties
-        Library.ThemeMap[Object] = Library.ThemeMap[Object]
+        local Object = Self.Instance
+        local ThemeMap = Library.ThemeMap
+        if type(ThemeMap) ~= "table" or not ThemeMap[Object] then
+            return Self
+        end
+
+        ThemeMap[Object].Properties = Properties or {}
+        return Self
     end
 
     Library.ChangeTheme = function(Self, Theme, Color)
@@ -919,8 +987,22 @@ local Library = {
         Element:Refresh(ReturnList)
     end
 
+    local function resolveGuiParent()
+        local ok, parent = pcall(function() return gethui() end)
+        if ok and parent then return parent end
+        ok, parent = pcall(function() return game:GetService("CoreGui") end)
+        if ok and parent then return parent end
+        local lp = game:GetService("Players").LocalPlayer
+        if lp then
+            local pg = lp:FindFirstChild("PlayerGui") or lp:WaitForChild("PlayerGui", 3)
+            if pg then return pg end
+        end
+        return game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    end
+    local guiParent = resolveGuiParent()
+
     Library.Holder = Library:Create("ScreenGui", {
-        Parent = gethui(),
+        Parent = guiParent,
         IgnoreGuiInset = true,
         Name = "\0",
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
@@ -928,7 +1010,7 @@ local Library = {
     })
 
     Library.NotifHolder = Library:Create("ScreenGui", {
-        Parent = gethui(),
+        Parent = guiParent,
         IgnoreGuiInset = true,
         Name = "\0",
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
@@ -936,12 +1018,16 @@ local Library = {
     })
 
     Library.UnusedHolder = Library:Create("ScreenGui", {
-        Parent = gethui(),
+        Parent = guiParent,
         Name = "\0",
         Enabled = false,
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
         ResetOnSpawn = false
     })
+
+    if not Library.Holder or not Library.Holder.Instance then
+        error("[Library] Failed to create Holder ScreenGui — check executor CoreGui/gethui access")
+    end
 
     -- themes (unchanged)
     Library:Thread(function()
@@ -2407,15 +2493,22 @@ end
             local Padding = 8
             local Spacing = 8
         
-            local function UpdatePositions()
-                local Y = GuiInset + Padding + 5
-            
+                        local function UpdatePositions()
+                local ViewportSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
                 for Index, Value in Library.Notifications do
                     local Height = Value.Items["Notification"].Instance.AbsoluteSize.Y
-            
-                    Value.Items["Notification"]:Tween({Position = UDim2.new(0, Padding, 0, Y)}, NotifTweenInfo)
-            
-                    Y += Height + Spacing
+                    local Width = Value.Items["Notification"].Instance.AbsoluteSize.X
+                    local X = Padding
+                    local Y = GuiInset + Padding + 5
+                    if Library.NotificationPosition == "Right" then
+                        X = ViewportSize.X - Width - Padding
+                    end
+                    for i = 1, Index - 1 do
+                        if Library.Notifications[i] and Library.Notifications[i].Items["Notification"] then
+                            Y += Library.Notifications[i].Items["Notification"].Instance.AbsoluteSize.Y + Spacing
+                        end
+                    end
+                    Value.Items["Notification"]:Tween({Position = UDim2.new(0, X, 0, Y)}, NotifTweenInfo)
                 end
             end
         
@@ -2576,12 +2669,11 @@ end
             }
 
             local Items = { } do 
-                if IsMobile then 
-                    Library:Create("UIScale", {
-                        Parent = Library.Holder.Instance,
-                        Scale = 0.7
-                    })
-                end
+                                local MenuScaleObj = Library:Create("UIScale", {
+                    Parent = Library.Holder.Instance,
+                    Scale = IsMobile and 0.7 or Library.MenuScale
+                })
+                Library.MenuScaleObject = MenuScaleObj.Instance
 
                 Items["Outline"] = Library:Create("Frame", {
                     Name = "\0",
@@ -2642,9 +2734,9 @@ end
                 Items["Pages"] = Library:Create("Frame", {
                     Name = "\0",
                     Parent = Items["Background"].Instance,
-                    AnchorPoint = Vector2.new(1, 0),
+                    AnchorPoint = Vector2.new(0.5, 0),
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(1, 0, 0, 0),
+                    Position = UDim2.new(0.5, 0, 0, 0),
                     Size = UDim2.new(0, 0, 0, 30),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X
@@ -2662,6 +2754,7 @@ end
                     Name = "\0",
                     Parent = Items["Pages"].Instance,
                     VerticalAlignment = Enum.VerticalAlignment.Center,
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
                     FillDirection = Enum.FillDirection.Horizontal,
                     Padding = UDim.new(0, 8),
                     SortOrder = Enum.SortOrder.LayoutOrder
@@ -2765,6 +2858,12 @@ end
             end
 
             Library:Connect(RunService.RenderStepped, function()
+                if not Library.AnimatedTitle then 
+                    for Index, Value in Letters do 
+                        Value.LetterInstance.Instance.Position = UDim2.new(0, Value.X, 0, Value.Y)
+                    end
+                    return 
+                end
                 local Tick = tick()
 
                 for Index, Value in Letters do 
@@ -4878,9 +4977,32 @@ end
             return setmetatable(Textbox, Library)
         end
 
-        Library.Init = function(Self)
+                Library.Init = function(Self)
             local SettingsPage = Self:Page({Name = "settings"}) do 
-                local ThemingSection = SettingsPage:Section({Name = "Theming", Side = 2}) do
+                local ThemingSection = SettingsPage:Section({Name = "Theming", Side = 1}) do
+                    ThemingSection:Dropdown({
+                        Name = "Theme Preset",
+                        Default = "Preset",
+                        Items = {"Preset", "Magma", "Navy", "Sand", "Sky"},
+                        Callback = function(Value)
+                            Library.SelectedTheme = Value
+                        end
+                    })
+                    
+                    ThemingSection:Button({
+                        Name = "Apply Theme",
+                        Callback = function()
+                            local Value = Library.SelectedTheme
+                            if Themes[Value] then
+                                Library.Theme = Themes[Value]
+                                for ThemeKey, ColorValue in pairs(Library.Theme) do
+                                    Library:ChangeTheme(ThemeKey, ColorValue)
+                                end
+                                Library:Notification("Theme applied: " .. Value, 3, Library.Theme.Accent)
+                            end
+                        end
+                    })
+
                     for Index, Value in Library.Theme do 
                         ThemingSection:Label({Name = Index}):Colorpicker({
                             Name = Index,
@@ -4892,135 +5014,69 @@ end
                             end
                         })
                     end
-
-                    local ThemeSelected 
-                    local ThemeName
-                    local ThemesFolder = Library.Directory .. Library.Folders.Themes .. "/"
-
-                    local ThemesDropdown = ThemingSection:Dropdown({
-                        Name = "Themes",
-                        Flag = "Themes",
-                        Default = "",
-                        Items = { },
-                        Callback = function(Value)
-                            ThemeSelected = Value
-                        end
-                    })
-
-                    ThemingSection:Textbox({
-                        Name = "Theme name",
-                        Flag = "ThemeName",
-                        Default = "",
-                        Callback = function(Value)
-                            ThemeName = Value
-                        end
-                    })
-
-                    ThemingSection:Button({
-                        Name = "Save",
-                        Callback = function()
-                            if ThemeName then 
-                                if ThemeName == "" then 
-                                    return
-                                end
-
-                                if isfile(ThemesFolder .. ThemeName .. ".json") then 
-                                    Library:Notification("Saved theme "..ThemeName, 3, Library.Theme.Accent)
-                                    writefile(ThemesFolder .. ThemeName .. ".json", Library:GetConfig())
-                                    return
-                                end
-
-                                writefile(ThemesFolder .. ThemeName .. ".json", Library:GetConfig())
-                                Library:GetThemesList(ThemesDropdown)
-                                Library:Notification("Created theme "..ThemeName, 3, Library.Theme.Accent)
-                            end
-                        end
-                    })
-
-                    ThemingSection:Button({
-                        Name = "Load",
-                        Callback = function()
-                            if ThemeSelected then 
-                                if not isfile(ThemesFolder .. ThemeSelected .. ".json") then
-                                    Library:Notification("Theme does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                    return
-                                end
-
-                                local Success, Error = Library:LoadConfig(readfile(ThemesFolder .. ThemeSelected .. ".json"))
-
-                                if Success then 
-                                    Library:Notification("Loaded theme "..ThemeSelected .. " succesfully", 3, Library.Theme.Accent)
-                                else
-                                    Library:Notification("Failed to load theme "..ThemeSelected .. " report this to the devs: "..Error, 3, Color3.fromRGB(255, 0, 0))
-                                end
-                            end
-                        end
-                    })
-
-                    ThemingSection:Button({
-                        Name = "Delete",
-                        Callback = function()
-                            if ThemeSelected then 
-                                if not isfile(ThemesFolder .. ThemeSelected .. ".json") then
-                                    Library:Notification("Theme does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                    return
-                                end
-
-                                delfile(ThemesFolder .. ThemeSelected .. ".json")
-                                Library:GetThemesList(ThemesDropdown)
-                                Library:Notification("Deleted theme "..ThemeSelected, 3, Library.Theme.Accent)
-                            end
-                        end
-                    })
-
-                    Library:GetThemesList(ThemesDropdown)
                 end
-                
+
                 local MenuSection = SettingsPage:Section({Name = "Menu", Side = 2}) do
                     MenuSection:Button({Name = "Exit", Callback = function()
                         Library:Exit()
                     end})
 
-                    -- Menu Keybind
                     MenuSection:Label({ Name = "Menu Keybind" }):Keybind({
                         Name = "Menu Keybind",
                         Flag = "MenuKeybind",
                         Default = Library.MenuKeybind,
                         Mode = "Toggle",
                         Callback = function(Value)
-                            Library.MenuKeybind = Library.Flags["MenuKeybind"].Key
+                            Library.MenuKeybind = Value
                         end
                     })
 
-                    if Self.Watermark then
-                        MenuSection:Toggle({
-                            Name = "Watermark",
-                            Flag = "Watermark",
-                            Default = true,
-                            Callback = function(Value)
-                                Self.Watermark:SetVisibility(Value)
-                            end
-                        })
-                    end
+                    local TargetScale = 100
+                    MenuSection:Textbox({
+                        Name = "Menu Scale (%)",
+                        Default = "100",
+                        Placeholder = "100",
+                        Callback = function(Value)
+                            TargetScale = tonumber(Value) or 100
+                        end
+                    })
 
-                    if Self.KeybindList then 
-                        MenuSection:Toggle({
-                            Name = "Keybind list",
-                            Flag = "Keybind list",
-                            Default = true,
-                            Callback = function(Value)
-                                Self.KeybindList:SetVisibility(Value)
+                    MenuSection:Button({
+                        Name = "Apply Scale",
+                        Callback = function()
+                            local scaleVal = math.clamp(TargetScale / 100, 0.2, 3.0)
+                            Library.MenuScale = scaleVal
+                            if Library.MenuScaleObject then
+                                Library.MenuScaleObject.Scale = scaleVal
                             end
-                        })
-                    end
+                            Library:Notification("Menu scale applied: " .. tostring(TargetScale) .. "%", 3, Library.Theme.Accent)
+                        end
+                    })
+
+                    MenuSection:Toggle({
+                        Name = "Animated Title",
+                        Default = Library.AnimatedTitle,
+                        Callback = function(Value)
+                            Library.AnimatedTitle = Value
+                        end
+                    })
+
+                    MenuSection:Dropdown({
+                        Name = "Notification Side",
+                        Default = Library.NotificationPosition,
+                        Items = {"Left", "Right"},
+                        Callback = function(Value)
+                            Library.NotificationPosition = Value
+                        end
+                    })
                 end
 
-                local ConfigName 
-                local ConfigSelected 
-                local ConfigsFolder = Library.Directory .. Library.Folders.Configs .. "/"
+                local ProfilesSection = SettingsPage:Section({Name = "Profiles", Side = 3}) do
+                    local ConfigName 
+                    local ConfigSelected 
+                    local ConfigsFolder = Library.Directory .. Library.Folders.Configs .. "/"
 
-                local ConfigsSection = SettingsPage:Section({Name = "Profiles", Side = 1}) do
-                    local ConfigsList = ConfigsSection:List({
+                    local ConfigsList = ProfilesSection:List({
                         Flag = "Configs",
                         Items = { },
                         Multi = false,
@@ -5029,36 +5085,29 @@ end
                         end
                     })
 
-                    ConfigsSection:Textbox({
-                        Name = "Config name",
-                        Flag = "ConfigName",
-                        Placeholder = "Config name",
+                    ProfilesSection:Textbox({
+                        Name = "Config Name",
+                        Placeholder = "Name",
                         Callback = function(Value)
-                            ConfigName = Value 
+                            ConfigName = Value
                         end
                     })
 
-                    ConfigsSection:Button({
+                    ProfilesSection:Button({
                         Name = "Create",
                         Callback = function()
                             if ConfigName then 
-                                if ConfigName == "" then 
+                                if isfile(ConfigsFolder .. ConfigName .. ".json") then
+                                    Library:Notification("Config already exists", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
-
-                                if isfile(ConfigsFolder .. ConfigName .. ".json") then 
-                                    Library:Notification("Config with the name "..ConfigName.." already exists", 3, Color3.fromRGB(255, 0, 0))
-                                    return
-                                end
-
                                 writefile(ConfigsFolder .. ConfigName .. ".json", Library:GetConfig())
                                 Library:GetConfigsList(ConfigsList)
                                 Library:Notification("Created config "..ConfigName, 3, Library.Theme.Accent)
                             end
                         end
                     })
-
-                    ConfigsSection:Button({
+                    ProfilesSection:Button({
                         Name = "Load",
                         Callback = function()
                             if ConfigSelected then 
@@ -5066,9 +5115,7 @@ end
                                     Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
-
                                 local Success, Error = Library:LoadConfig(readfile(ConfigsFolder .. ConfigSelected .. ".json"))
-
                                 if Success then 
                                     Library:Notification("Loaded config "..ConfigSelected .. " succesfully", 3, Library.Theme.Accent)
                                 else
@@ -5077,8 +5124,7 @@ end
                             end
                         end
                     })
-
-                    ConfigsSection:Button({
+                    ProfilesSection:Button({
                         Name = "Delete",
                         Callback = function()
                             if ConfigSelected then 
@@ -5086,15 +5132,13 @@ end
                                     Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
-
                                 delfile(ConfigsFolder .. ConfigSelected .. ".json")
                                 Library:GetConfigsList(ConfigsList)
                                 Library:Notification("Deleted config "..ConfigSelected, 3, Library.Theme.Accent)
                             end
                         end
                     })
-
-                    ConfigsSection:Button({
+                    ProfilesSection:Button({
                         Name = "Overwrite",
                         Callback = function()
                             if ConfigSelected then 
@@ -5102,17 +5146,15 @@ end
                                     Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
-
                                 writefile(ConfigsFolder .. ConfigSelected .. ".json", Library:GetConfig())
                                 Library:Notification("Overwrote config "..ConfigSelected, 3, Library.Theme.Accent)
                             end
                         end
                     })
-
                     Library:GetConfigsList(ConfigsList)
                 end
 
-                local AutoloadSection = SettingsPage:Section({Name = "Autoload", Side = 1}) do
+                local AutoloadSection = SettingsPage:Section({Name = "Autoload", Side = 3}) do
                     AutoloadSection:Button({
                         Name = "Set selected as autoload",
                         Callback = function()
@@ -5121,13 +5163,11 @@ end
                                     Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
-
                                 writefile(Library.Directory .. "/autoload.json", readfile(ConfigsFolder .. ConfigSelected .. ".json"))
                                 Library:Notification("Set config "..ConfigSelected.." as autoload", 3, Library.Theme.Accent)
                             end
                         end
                     })
-
                     AutoloadSection:Button({
                         Name = "Remove autoload",
                         Callback = function()
@@ -5136,9 +5176,7 @@ end
                         end
                     })
                 end
-
                 local AutoloadContent = readfile(Library.Directory .. "/autoload.json")
-
                 if AutoloadContent ~= "" then 
                     Library:LoadConfig(AutoloadContent)
                 end
@@ -5152,5 +5190,8 @@ if not Library.Flags["MenuKeybind"] then
     Library.Flags["MenuKeybind"] = { Key = Library.MenuKeybind, Mode = "Toggle", Toggled = false }
 end
 
+-- Library populada com sucesso
+
+-- MUST return so loadstring(...)() is not nil
 getgenv().Library = Library
 return Library
