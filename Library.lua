@@ -1,23 +1,3 @@
---[[
-    Code is not as clean as it could be but it works
-    
-    Made by samet
-    This is a FREE ui release made by me (samet) on May 30 to celebrate my birthday, If anyone is selling this they are scammers.
-    The design credits for the ui goes to eskolzz. It was brought to life in luau by me.
-
-    MY ONLY ACCOUNT IS: joestar._3
-
-    If you want to commission a ui:
-    https://discord.gg/XsTteAwprs
-
-    Please give credit if used or modified.
-
-    MODIFICATIONS:
-    - Keybinds now store key name (e.g., "F") and compare correctly.
-    - Dropdown: added scroll (max height 150) and search box.
-    - MenuKeybind now uses name string (e.g., "RightShift").
-]]
-
 if getgenv().Library and type(getgenv().Library.Exit) == "function" then
     getgenv().Library:Exit()
 end
@@ -1762,10 +1742,6 @@ Library.CreateKeybind = function(Self, Data)
             Key = Keybind.Key,
             Toggled = Keybind.Toggled
         }
-
-        if Data.Callback then 
-            Library:SafeCall(Data.Callback, Keybind.Toggled)
-        end
     end
 
     local KeybindObject 
@@ -1834,80 +1810,57 @@ Library.CreateKeybind = function(Self, Data)
         Update()
     end
 
-    -- CORREÇÃO: Aceita string "F" e converte para Enum
-    function Keybind:Set(Key)
-        if type(Key) == "string" and not Key:find("Enum") then
-            -- tenta converter para Enum
-            local ok, enum = pcall(function() return Enum.KeyCode[Key] end)
-            if ok and enum then
-                Key = enum
-            else
-                local ok2, enum2 = pcall(function() return Enum.UserInputType[Key] end)
-                if ok2 and enum2 then
-                    Key = enum2
-                end
-            end
+    -- Normaliza EnumItem, nome simples ("F") e valor salvo ("Enum.KeyCode.F").
+    local function resolveKey(value)
+        if typeof(value) == "EnumItem" then
+            return value
         end
 
-        if typeof(Key) == "EnumItem" then
-            -- Armazena o nome da tecla, ex: "F", "RightShift"
-            Keybind.Key = Key.Name
-            Keybind.Value = Key.Name
-            Items["KeyButton"].Instance.Text = Key.Name:lower()
-
-            Flags[Keybind.Flag] = {
-                Mode = Keybind.Mode,
-                Key = Keybind.Key,
-                Toggled = Keybind.Toggled
-            }
-
-            if Data.Callback then 
-                Library:SafeCall(Data.Callback, Keybind.Toggled)
-            end
-
-            Update()
-        elseif type(Key) == "table" then
-            local RealKey = Key.Key
-            if type(RealKey) == "string" then
-                local ok, enum = pcall(function() return Enum.KeyCode[RealKey] end)
-                if ok and enum then
-                    Keybind.Key = enum.Name
-                    Keybind.Value = enum.Name
-                else
-                    local ok2, enum2 = pcall(function() return Enum.UserInputType[RealKey] end)
-                    if ok2 and enum2 then
-                        Keybind.Key = enum2.Name
-                        Keybind.Value = enum2.Name
-                    else
-                        Keybind.Key = RealKey
-                        Keybind.Value = RealKey
-                    end
-                end
-            end
-
-            if Key.Mode then
-                Keybind.Mode = Key.Mode
-                Keybind:SetMode()
-            end
-
-            Items["KeyButton"].Instance.Text = (Keybind.Value or "none"):lower()
-
-            if Data.Callback then 
-                Library:SafeCall(Data.Callback, Keybind.Toggled)
-            end
-            
-            Update()
-        elseif table.find({"Toggle", "Hold", "Always"}, Key) then
-            Keybind.Mode = Key
-            Keybind:SetMode()
-
-            if Data.Callback then 
-                Library:SafeCall(Data.Callback, Keybind.Toggled)
-            end
-
-            Update()
+        if type(value) ~= "string" then
+            return nil
         end
 
+        local keyName = value
+            :gsub("^Enum%.KeyCode%.", "")
+            :gsub("^Enum%.UserInputType%.", "")
+
+        return Enum.KeyCode[keyName] or Enum.UserInputType[keyName]
+    end
+
+    local function matchesInput(input)
+        return Keybind.Key ~= ""
+            and (input.KeyCode.Name == Keybind.Key or input.UserInputType.Name == Keybind.Key)
+    end
+
+    function Keybind:Set(value)
+        local mode
+        local key = value
+
+        if type(value) == "table" then
+            mode = value.Mode
+            key = value.Key
+        elseif table.find({"Toggle", "Hold", "Always"}, value) then
+            mode = value
+            key = nil
+        end
+
+        if mode and table.find({"Toggle", "Hold", "Always"}, mode) then
+            Keybind.Mode = mode
+        end
+
+        local enumItem = resolveKey(key)
+        if enumItem then
+            Keybind.Key = enumItem.Name
+            Keybind.Value = enumItem.Name
+            Items["KeyButton"].Instance.Text = enumItem.Name:lower()
+        elseif key ~= nil then
+            Keybind.Key = ""
+            Keybind.Value = ""
+            Items["KeyButton"].Instance.Text = "none"
+        end
+
+        Keybind:SetMode()
+        Update()
         Keybind.Picking = false
     end
 
@@ -1929,31 +1882,16 @@ Library.CreateKeybind = function(Self, Data)
         end)
     end)
 
-    -- CORREÇÃO: Comparação usando Keybind.Key (string)
     Library:Connect(UserInputService.InputBegan, function(Input, GPE)
-        if Keybind.Value == "none" or Keybind.Key == "" then
-            return
-        end
-
-        if not GPE then
-            local keyName = tostring(Input.KeyCode)
-            local inputName = tostring(Input.UserInputType)
-            if keyName == Keybind.Key then
-                if Keybind.Mode == "Toggle" then 
-                    Keybind:Press()
-                elseif Keybind.Mode == "Hold" then 
-                    Keybind:Press(true)
-                elseif Keybind.Mode == "Always" then 
-                    Keybind:Press(true)
-                end
-            elseif inputName == Keybind.Key then
-                if Keybind.Mode == "Toggle" then 
-                    Keybind:Press()
-                elseif Keybind.Mode == "Hold" then 
-                    Keybind:Press(true)
-                elseif Keybind.Mode == "Always" then 
-                    Keybind:Press(true)
-                end
+        if not GPE
+            and not Keybind.Picking
+            and not UserInputService:GetFocusedTextBox()
+            and matchesInput(Input)
+        then
+            if Keybind.Mode == "Toggle" then
+                Keybind:Press()
+            elseif Keybind.Mode == "Hold" or Keybind.Mode == "Always" then
+                Keybind:Press(true)
             end
         end
 
@@ -1965,28 +1903,8 @@ Library.CreateKeybind = function(Self, Data)
     end)
 
     Library:Connect(UserInputService.InputEnded, function(Input, GPE)
-        if GPE then
-            return
-        end
-
-        if Keybind.Value == "none" or Keybind.Key == "" then
-            return
-        end
-
-        local keyName = tostring(Input.KeyCode)
-        local inputName = tostring(Input.UserInputType)
-        if keyName == Keybind.Key then
-            if Keybind.Mode == "Hold" then 
-                Keybind:Press(false)
-            elseif Keybind.Mode == "Always" then 
-                Keybind:Press(true)
-            end
-        elseif inputName == Keybind.Key then
-            if Keybind.Mode == "Hold" then 
-                Keybind:Press(false)
-            elseif Keybind.Mode == "Always" then 
-                Keybind:Press(true)
-            end
+        if not GPE and matchesInput(Input) and Keybind.Mode == "Hold" then
+            Keybind:Press(false)
         end
     end)
 
@@ -2757,14 +2675,22 @@ end
                 Items["Outline"].Instance.Position = UDim2.new(0, AbsPos.X, 0, AbsPos.Y + GuiInset)
             end
 
-            -- Menu Keybind fix: usa nome da tecla (ex: "RightShift")
-            Library:Connect(UserInputService.InputBegan, function(Input)
-                local menuKey = Library.Flags["MenuKeybind"] and Library.Flags["MenuKeybind"].Key or Library.MenuKeybind
-                if tostring(Input.KeyCode) == menuKey or tostring(Input.UserInputType) == menuKey then
-                    if UserInputService:GetFocusedTextBox() then
-                        return
-                    end
+            -- Aceita nomes simples, EnumItem e valores antigos salvos como "Enum.KeyCode.X".
+            Library:Connect(UserInputService.InputBegan, function(Input, GPE)
+                if GPE or UserInputService:GetFocusedTextBox() then
+                    return
+                end
 
+                local configured = Library.Flags["MenuKeybind"] and Library.Flags["MenuKeybind"].Key or Library.MenuKeybind
+                if typeof(configured) == "EnumItem" then
+                    configured = configured.Name
+                elseif type(configured) == "string" then
+                    configured = configured
+                        :gsub("^Enum%.KeyCode%.", "")
+                        :gsub("^Enum%.UserInputType%.", "")
+                end
+
+                if configured ~= "" and (Input.KeyCode.Name == configured or Input.UserInputType.Name == configured) then
                     Window:SetOpen(not Window.IsOpen)
                 end
             end)
@@ -3291,7 +3217,9 @@ end
                     Name = Data.Name or Data.name or Toggle.Name,
                     Flag = Data.Flag or Data.flag or (Data.Name or Data.name or Toggle.Name),
                     Default = Data.Default or Data.default or nil,
-                    Callback = Data.Callback or Data.callback or function() end,
+                    Callback = Data.Callback or Data.callback or function(value)
+                        Toggle:Set(value)
+                    end,
                     Mode = Data.Mode or Data.mode or "Toggle",
 
                     Window = Toggle.Window,
