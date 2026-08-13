@@ -11,6 +11,11 @@
     https://discord.gg/XsTteAwprs
 
     Please give credit if used or modified.
+
+    MODIFICATIONS:
+    - Keybinds now store key name (e.g., "F") and compare correctly.
+    - Dropdown: added scroll (max height 150) and search box.
+    - MenuKeybind now uses name string (e.g., "RightShift").
 ]]
 
 if getgenv().Library and type(getgenv().Library.Exit) == "function" then
@@ -36,7 +41,7 @@ local Mouse = cloneref(LocalPlayer:GetMouse())
 
 local Library = { 
     Flags = { },
-    MenuKeybind = tostring(Enum.KeyCode.RightShift), -- padrão alterado para RightShift
+    MenuKeybind = "RightShift", -- agora armazena o nome da tecla (ex: "RightShift")
 
     Directory = "juanitaaaaaaa",
     Folders = {
@@ -934,7 +939,7 @@ local Library = {
         ResetOnSpawn = false
     })
 
-    -- themes
+    -- themes (unchanged)
     Library:Thread(function()
         writefile(Library.Directory .. Library.Folders.Themes .. "/Sky.json", '{"MenuKeybindModeDropdown":"Toggle","AccentTheming":{"Color":"#93eeff","Alpha":0},"BackgroundTheming":{"Color":"#141718","Alpha":0},"color":{"Color":"#ffffff","Alpha":0},"MenuKeybind":{"Key":"Enum.KeyCode.X","Mode":"Toggle"},"keybindModeDropdown":"Toggle","keybind2ModeDropdown":"Toggle","Hovered ElementTheming":{"Color":"#444949","Alpha":0},"keybind2ShowInKeybindsList":true,"target":"Head","OutlineTheming":{"Color":"#292d2e","Alpha":0},"keybind3ShowInKeybindsList":true,"InlineTheming":{"Color":"#1f2324","Alpha":0},"keybind":{"Key":"Enum.KeyCode.E","Mode":"Toggle"},"keybind3":{"Key":"Enum.KeyCode.R","Mode":"Toggle"},"keybind3ModeDropdown":"Toggle","ElementTheming":{"Color":"#2e3131","Alpha":0},"Element 2Theming":{"Color":"#454a4b","Alpha":0},"keybind2":{"Key":"Enum.KeyCode.F","Mode":"Toggle"},"ThemeName":"Sky","BorderTheming":{"Color":"#1a1d1d","Alpha":0},"AutoParry":false,"ConfigName":"","keybindShowInKeybindsList":true,"Inactive TextTheming":{"Color":"#868686","Alpha":0},"walkspeed":16,"TextTheming":{"Color":"#ffffff","Alpha":0},"MenuKeybindShowInKeybindsList":true,"textbox":"default"}')
         writefile(Library.Directory .. Library.Folders.Themes .. "/Magma.json", '{"MenuKeybindModeDropdown":"Toggle","AccentTheming":{"Color":"#e92b1a","Alpha":0},"BackgroundTheming":{"Color":"#221c1c","Alpha":0},"color":{"Color":"#ffffff","Alpha":0},"MenuKeybind":{"Key":"Enum.KeyCode.X","Mode":"Toggle"},"keybindModeDropdown":"Toggle","keybind2ModeDropdown":"Toggle","Hovered ElementTheming":{"Color":"#362a2a","Alpha":0},"keybind2ShowInKeybindsList":true,"target":"Head","OutlineTheming":{"Color":"#291d1d","Alpha":0},"keybind3ShowInKeybindsList":true,"InlineTheming":{"Color":"#1f1717","Alpha":0},"keybind":{"Key":"Enum.KeyCode.E","Mode":"Toggle"},"keybind3":{"Key":"Enum.KeyCode.R","Mode":"Toggle"},"keybind3ModeDropdown":"Toggle","ElementTheming":{"Color":"#292121","Alpha":0},"Element 2Theming":{"Color":"#363131","Alpha":0},"keybind2":{"Key":"Enum.KeyCode.F","Mode":"Toggle"},"ThemeName":"Magma","BorderTheming":{"Color":"#000000","Alpha":0},"AutoParry":true,"ConfigName":"","keybindShowInKeybindsList":true,"Inactive TextTheming":{"Color":"#867979","Alpha":0},"walkspeed":16,"TextTheming":{"Color":"#d0cfe3","Alpha":0},"MenuKeybindShowInKeybindsList":true,"textbox":"default"}')
@@ -1554,6 +1559,7 @@ local Library = {
             return Colorpicker, Items 
         end
 
+        -- CORREÇÃO: Keybind agora armazena nome da tecla e compara corretamente
         Library.CreateKeybind = function(Self, Data)
             local Keybind = {
                 Flag = Data.Flag,
@@ -1827,17 +1833,26 @@ local Library = {
                 Update()
             end
     
-            function Keybind:Set(Key) -- this is so shit but its whatever
-                if string.find(tostring(Key), "Enum") then 
-                    Keybind.Key = tostring(Key)
-    
-                    Key = Key.Name == "Backspace" and "none" or Key.Name
-    
-                    local KeyString = Keys[Keybind.Key] or string.gsub(Key, "Enum.", "") or "none"
-                    local TextToDisplay = string.gsub(string.gsub(KeyString, "KeyCode.", ""), "UserInputType.", "") or "none"
-    
-                    Keybind.Value = TextToDisplay
-                    Items["KeyButton"].Instance.Text = TextToDisplay:lower()
+            -- CORREÇÃO: Aceita string "F" e converte para Enum
+            function Keybind:Set(Key)
+                if type(Key) == "string" and not Key:find("Enum") then
+                    -- tenta converter para Enum
+                    local ok, enum = pcall(function() return Enum.KeyCode[Key] end)
+                    if ok and enum then
+                        Key = enum
+                    else
+                        local ok2, enum2 = pcall(function() return Enum.UserInputType[Key] end)
+                        if ok2 and enum2 then
+                            Key = enum2
+                        end
+                    end
+                end
+
+                if typeof(Key) == "EnumItem" then
+                    -- Armazena o nome da tecla, ex: "F", "RightShift"
+                    Keybind.Key = Key.Name
+                    Keybind.Value = Key.Name
+                    Items["KeyButton"].Instance.Text = Key.Name:lower()
     
                     Flags[Keybind.Flag] = {
                         Mode = Keybind.Mode,
@@ -1851,24 +1866,30 @@ local Library = {
 
                     Update()
                 elseif type(Key) == "table" then
-                    local RealKey = Key.Key == "Backspace" and "none" or Key.Key
-                    Keybind.Key = tostring(Key.Key)
-    
+                    local RealKey = Key.Key
+                    if type(RealKey) == "string" then
+                        local ok, enum = pcall(function() return Enum.KeyCode[RealKey] end)
+                        if ok and enum then
+                            Keybind.Key = enum.Name
+                            Keybind.Value = enum.Name
+                        else
+                            local ok2, enum2 = pcall(function() return Enum.UserInputType[RealKey] end)
+                            if ok2 and enum2 then
+                                Keybind.Key = enum2.Name
+                                Keybind.Value = enum2.Name
+                            else
+                                Keybind.Key = RealKey
+                                Keybind.Value = RealKey
+                            end
+                        end
+                    end
+
                     if Key.Mode then
                         Keybind.Mode = Key.Mode
                         Keybind:SetMode()
-                    else
-                        Keybind.Mode = "Toggle"
-                        Keybind:SetMode()
                     end
     
-                    local KeyString = Keys[Keybind.Key] or string.gsub(tostring(RealKey), "Enum.", "") or RealKey
-                    local TextToDisplay = KeyString and string.gsub(string.gsub(KeyString, "KeyCode.", ""), "UserInputType.", "") or "none"
-    
-                    TextToDisplay = string.gsub(string.gsub(KeyString, "KeyCode.", ""), "UserInputType.", "")
-    
-                    Keybind.Value = TextToDisplay
-                    Items["KeyButton"].Instance.Text = TextToDisplay:lower()
+                    Items["KeyButton"].Instance.Text = (Keybind.Value or "none"):lower()
     
                     if Data.Callback then 
                         Library:SafeCall(Data.Callback, Keybind.Toggled)
@@ -1908,12 +1929,14 @@ local Library = {
             end)
     
             Library:Connect(UserInputService.InputBegan, function(Input, GPE)
-                if Keybind.Value == "none" then
+                if Keybind.Value == "none" or Keybind.Key == "" then
                     return
                 end
     
                 if not GPE then
-                    if tostring(Input.KeyCode) == Keybind.Key then
+                    local keyName = tostring(Input.KeyCode)
+                    local inputName = tostring(Input.UserInputType)
+                    if keyName == Keybind.Key then
                         if Keybind.Mode == "Toggle" then 
                             Keybind:Press()
                         elseif Keybind.Mode == "Hold" then 
@@ -1921,7 +1944,7 @@ local Library = {
                         elseif Keybind.Mode == "Always" then 
                             Keybind:Press(true)
                         end
-                    elseif tostring(Input.UserInputType) == Keybind.Key then
+                    elseif inputName == Keybind.Key then
                         if Keybind.Mode == "Toggle" then 
                             Keybind:Press()
                         elseif Keybind.Mode == "Hold" then 
@@ -1944,17 +1967,19 @@ local Library = {
                     return
                 end
 
-                if Keybind.Value == "None" then
+                if Keybind.Value == "none" or Keybind.Key == "" then
                     return
                 end
-    
-                if tostring(Input.KeyCode) == Keybind.Key then
+
+                local keyName = tostring(Input.KeyCode)
+                local inputName = tostring(Input.UserInputType)
+                if keyName == Keybind.Key then
                     if Keybind.Mode == "Hold" then 
                         Keybind:Press(false)
                     elseif Keybind.Mode == "Always" then 
                         Keybind:Press(true)
                     end
-                elseif tostring(Input.UserInputType) == Keybind.Key then
+                elseif inputName == Keybind.Key then
                     if Keybind.Mode == "Hold" then 
                         Keybind:Press(false)
                     elseif Keybind.Mode == "Always" then 
@@ -1968,19 +1993,22 @@ local Library = {
             end)
     
             if Data.Default then
-                local resolvedKey = Data.Default
-                if type(resolvedKey) == "string" and not resolvedKey:find("Enum") then
-                    local ok, val = pcall(function() return Enum.KeyCode[resolvedKey] end)
-                    if ok and val then
-                        resolvedKey = tostring(val)
+                -- Se for string, converte para Enum
+                local default = Data.Default
+                if type(default) == "string" and not default:find("Enum") then
+                    local ok, enum = pcall(function() return Enum.KeyCode[default] end)
+                    if ok and enum then
+                        default = enum
                     else
-                        local ok2, val2 = pcall(function() return Enum.UserInputType[resolvedKey] end)
-                        if ok2 and val2 then resolvedKey = tostring(val2) end
+                        local ok2, enum2 = pcall(function() return Enum.UserInputType[default] end)
+                        if ok2 and enum2 then
+                            default = enum2
+                        end
                     end
                 end
                 Keybind:Set({
                     Mode = Data.Mode or "Toggle",
-                    Key = resolvedKey,
+                    Key = default,
                 })
             end
     
@@ -2182,8 +2210,8 @@ local Library = {
             return setmetatable(Watermark, Library)
         end
 
-        local KeybindTweenInfo = TweenInfo.new(0.55, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out) -- this is only for the keybind list and should not be used anywhere else
-        
+        local KeybindTweenInfo = TweenInfo.new(0.55, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+
         Library.KeybindList = function(Self)
             local KeybindList = {
                 Items = {},
@@ -2727,7 +2755,7 @@ local Library = {
                 Items["Outline"].Instance.Position = UDim2.new(0, AbsPos.X, 0, AbsPos.Y + GuiInset)
             end
 
-            -- 🔥 CORREÇÃO: Menu Keybind dinâmico
+            -- Menu Keybind fix: usa nome da tecla (ex: "RightShift")
             Library:Connect(UserInputService.InputBegan, function(Input)
                 local menuKey = Library.Flags["MenuKeybind"] and Library.Flags["MenuKeybind"].Key or Library.MenuKeybind
                 if tostring(Input.KeyCode) == menuKey or tostring(Input.UserInputType) == menuKey then
@@ -3661,6 +3689,7 @@ local Library = {
             return setmetatable(Slider, Library)
         end
 
+        -- DROPDOWN COM SCROLL E PESQUISA
         Library.Dropdown = function(Self, Params)
             Params = Params or { }
 
@@ -3794,6 +3823,7 @@ local Library = {
                     AutomaticSize = Enum.AutomaticSize.Y
                 }):AddToTheme({TextColor3 = 'Text'})          
                 
+                -- OptionHolder com scroll e pesquisa
                 Items["OptionHolder"] = Library:Create("TextButton", {
                     Name = "\0",
                     FontFace = Library.Font,
@@ -3803,10 +3833,10 @@ local Library = {
                     TextColor3 = Color3.fromRGB(0, 0, 0),
                     Text = "",
                     AutoButtonColor = false,
-                    Size = UDim2.new(0, 200, 0, 50),
+                    Size = UDim2.new(0, 200, 0, 150), -- altura fixa com scroll
                     Position = UDim2.new(0, 792, 0, 649),
                     BorderSizePixel = 0,
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    ClipsDescendants = true,
                     BackgroundColor3 = Library.Theme["Background"]
                 }):AddToTheme({BackgroundColor3 = 'Background'})
                 
@@ -3836,11 +3866,58 @@ local Library = {
                     PaddingLeft = UDim.new(0, 8)
                 })
 
-                Library:Create("UIListLayout", {
+                -- Search box
+                Items["Search"] = Library:Create("TextBox", {
+                    Name = "\0",
+                    FontFace = Library.Font,
+                    TextSize = Library.FontSize,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = Items["OptionHolder"].Instance,
+                    PlaceholderColor3 = Library.Theme["Inactive Text"],
+                    PlaceholderText = "Search...",
+                    Size = UDim2.new(1, 0, 0, 20),
+                    TextColor3 = Library.Theme["Text"],
+                    Text = "",
+                    BackgroundColor3 = Library.Theme["Element"],
+                    BorderSizePixel = 0,
+                    ClearTextOnFocus = false,
+                }):AddToTheme({TextColor3 = 'Text', PlaceholderColor3 = 'Inactive Text', BackgroundColor3 = 'Element'})
+
+                Library:Create("UIStroke", {
+                    Name = "\0",
+                    Parent = Items["Search"].Instance,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    LineJoinMode = Enum.LineJoinMode.Miter,
+                    Color = Library.Theme["Outline"]
+                }):AddToTheme({Color = 'Outline'})
+
+                -- ScrollingFrame para opções
+                Items["OptionScroller"] = Library:Create("ScrollingFrame", {
                     Name = "\0",
                     Parent = Items["OptionHolder"].Instance,
-                    Padding = UDim.new(0, 8),
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 0, 0, 28),
+                    Size = UDim2.new(1, 0, 1, -28),
+                    BorderSizePixel = 0,
+                    CanvasSize = UDim2.new(0, 0, 0, 0),
+                    ScrollBarImageColor3 = Library.Theme["Accent"],
+                    ScrollBarThickness = 2,
+                    Active = true,
+                }):AddToTheme({ScrollBarImageColor3 = 'Accent'})
+
+                Library:Create("UIListLayout", {
+                    Name = "\0",
+                    Parent = Items["OptionScroller"].Instance,
+                    Padding = UDim.new(0, 4),
                     SortOrder = Enum.SortOrder.LayoutOrder
+                })
+
+                Library:Create("UIPadding", {
+                    Name = "\0",
+                    Parent = Items["OptionScroller"].Instance,
+                    PaddingBottom = UDim.new(0, 4),
+                    PaddingRight = UDim.new(0, 4),
+                    PaddingLeft = UDim.new(0, 4)
                 })
 
                 Dropdown.Items = Items 
@@ -3905,7 +3982,7 @@ local Library = {
                     FontFace = Library.Font,
                     TextSize = Library.FontSize,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Parent = Items["OptionHolder"].Instance,
+                    Parent = Items["OptionScroller"].Instance,
                     TextColor3 = Library.Theme["Inactive Text"],
                     Text = Value,
                     AutoButtonColor = false,
@@ -4000,6 +4077,26 @@ local Library = {
                 end)
 
                 Dropdown.Options[OptionData.Name] = OptionData
+
+                -- Aplica filtro de pesquisa (se houver)
+                local searchText = Items["Search"].Instance.Text
+                if searchText and searchText ~= "" then
+                    local found = string.find(string.lower(OptionData.Name), string.lower(searchText), 1, true)
+                    OptionButton.Instance.Visible = (found ~= nil)
+                else
+                    OptionButton.Instance.Visible = true
+                end
+
+                -- Atualiza canvas do ScrollingFrame
+                local scroller = Items["OptionScroller"].Instance
+                local totalHeight = 0
+                for _, child in ipairs(scroller:GetChildren()) do
+                    if child:IsA("TextButton") and child.Visible then
+                        totalHeight = totalHeight + child.AbsoluteSize.Y + 4
+                    end
+                end
+                scroller.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+
                 return OptionData
             end
 
@@ -4011,13 +4108,31 @@ local Library = {
             end
 
             function Dropdown:Refresh(List)
+                -- Limpa opções existentes
                 for Index, Value in Dropdown.Options do 
                     Dropdown:Remove(Value.Name)
                 end
 
+                -- Adiciona novas
                 for Index, Value in List do 
                     Dropdown:Add(Value)
                 end
+
+                -- Limpa pesquisa
+                Items["Search"].Instance.Text = ""
+                -- Mostra todas
+                for _, opt in pairs(Dropdown.Options) do
+                    opt.Button.Instance.Visible = true
+                end
+                -- Atualiza canvas
+                local scroller = Items["OptionScroller"].Instance
+                local totalHeight = 0
+                for _, child in ipairs(scroller:GetChildren()) do
+                    if child:IsA("TextButton") and child.Visible then
+                        totalHeight = totalHeight + child.AbsoluteSize.Y + 4
+                    end
+                end
+                scroller.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
             end
 
             function Dropdown:SetText(Text)
@@ -4048,7 +4163,8 @@ local Library = {
 
                     local Scale = Library:GetScreenScale()
                     OptionHolder.Position = Library:PopupPosition(RealDropdown, OptionHolder, 0)
-                    OptionHolder.Size = UDim2.new(0, RealDropdown.AbsoluteSize.X / Scale, 0, 0)
+                    -- Ajusta largura para igual ao dropdown
+                    OptionHolder.Size = UDim2.new(0, RealDropdown.AbsoluteSize.X / Scale, 0, 150) -- altura fixa
                     
                     Items["OptionHolder"]:Tween({
                         Position = Library:PopupPosition(RealDropdown, OptionHolder, 10)
@@ -4107,6 +4223,27 @@ local Library = {
 
             Items["RealDropdown"]:Connect("MouseButton1Down", function()
                 Dropdown:SetOpen(not Dropdown.IsOpen)
+            end)
+
+            -- Pesquisa
+            Items["Search"]:Connect("Changed", function(Property)
+                if Property == "Text" then
+                    local searchText = Items["Search"].Instance.Text
+                    local scroller = Items["OptionScroller"].Instance
+                    local totalHeight = 0
+                    for _, opt in pairs(Dropdown.Options) do
+                        if searchText == "" then
+                            opt.Button.Instance.Visible = true
+                        else
+                            local found = string.find(string.lower(opt.Name), string.lower(searchText), 1, true)
+                            opt.Button.Instance.Visible = (found ~= nil)
+                        end
+                        if opt.Button.Instance.Visible then
+                            totalHeight = totalHeight + opt.Button.Instance.AbsoluteSize.Y + 4
+                        end
+                    end
+                    scroller.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+                end
             end)
 
             for Index, Value in Dropdown.OptionItems do 
@@ -4877,7 +5014,7 @@ local Library = {
                         Library:Exit()
                     end})
 
-                    -- 🔥 CORREÇÃO: Callback do Menu Keybind atualiza a variável global
+                    -- Menu Keybind
                     MenuSection:Label({ Name = "Menu Keybind" }):Keybind({
                         Name = "Menu Keybind",
                         Flag = "MenuKeybind",
@@ -5043,7 +5180,7 @@ local Library = {
     end
 end
 
--- Inicializa o flag MenuKeybind caso não exista
+-- Inicializa o flag MenuKeybind
 if not Library.Flags["MenuKeybind"] then
     Library.Flags["MenuKeybind"] = { Key = Library.MenuKeybind, Mode = "Toggle", Toggled = false }
 end
