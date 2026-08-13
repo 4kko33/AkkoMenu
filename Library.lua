@@ -4879,19 +4879,25 @@ end
         end
 
         Library.Init = function(Self)
-            local SettingsPage = Self:Page({Name = "settings"}) do
-                local ThemingSection = SettingsPage:Section({Name = "Theming", Side = 2}) do
-                    for Index, Value in Library.Theme do 
-                        ThemingSection:Label({Name = Index}):Colorpicker({
-                            Name = Index,
-                            Flag = Index.."Theming",
-                            Default = Value,
-                            Callback = function(Value)
-                                Library.Theme[Index] = Value
-                                Library:ChangeTheme(Index, Value)
-                            end
-                        })
+    local SettingsPage = Self:Page({Name = "settings"})
+    Self.SettingsPage = SettingsPage
+
+    do
+        local ThemingSection = SettingsPage:Section({
+            Name = "Theming",
+            Side = 2
+        }) do
+            for Index, Value in Library.Theme do
+                ThemingSection:Label({Name = Index}):Colorpicker({
+                    Name = Index,
+                    Flag = Index .. "Theming",
+                    Default = Value,
+                    Callback = function(Value)
+                        Library.Theme[Index] = Value
+                        Library:ChangeTheme(Index, Value)
                     end
+                })
+            end
 
                     local ThemeSelected 
                     local ThemeName
