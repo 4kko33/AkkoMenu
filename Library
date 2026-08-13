@@ -1,5 +1,5 @@
 local menu
-local MenuName = isfile("Akko.farm/menuname.txt") and readfile("Akko.farm/menuname.txt") or nil
+local MenuName = isfile("bitchbot/menuname.txt") and readfile("bitchbot/menuname.txt") or nil
 local loadstart = tick()
 
 local function map(X, A, B, C, D)
@@ -466,46 +466,41 @@ local function GetEvent(eventname)
 	return allevent[eventname]
 end
 
+-- images load in background — UI never waits on HttpGet
 local BBOT_IMAGES = {}
-MultiThreadList({
-	function()
-		BBOT_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png")
-	end,
-	function()
-		BBOT_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png")
-	end,
-	function()
-		BBOT_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png")
-	end,
-	function()
-		BBOT_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png")
-	end,
-	function()
-		BBOT_IMAGES[5] = game:HttpGet("https://i.imgur.com/OZUR3EY.png")
-	end,
-	function()
-		BBOT_IMAGES[6] = game:HttpGet("https://i.imgur.com/3HGuyVa.png")
-	end,
-})
-
--- MULTITHREAD DAT LOADING SO FAST!!!!
-local loaded = {}
-do
-	local function Loopy_Image_Checky()
-		for i = 1, 6 do
-			local v = BBOT_IMAGES[i]
-			if v == nil then
-				return true
-			elseif not loaded[i] then
-				loaded[i] = true
-			end
-		end
-		return false
-	end
-	while Loopy_Image_Checky() do
-		wait(0)
+local BBOT_IMAGE_REFS = {}
+local BBOT_IMAGE_URLS = {
+	"https://i.imgur.com/9NMuFcQ.png",
+	"https://i.imgur.com/jG3NjxN.png",
+	"https://i.imgur.com/2Ty4u2O.png",
+	"https://i.imgur.com/kNGuTlj.png",
+	"https://i.imgur.com/OZUR3EY.png",
+	"https://i.imgur.com/3HGuyVa.png",
+}
+local function BindImageSlot(slot, drawing)
+	if not drawing then return end
+	BBOT_IMAGE_REFS[slot] = BBOT_IMAGE_REFS[slot] or {}
+	table.insert(BBOT_IMAGE_REFS[slot], drawing)
+	if BBOT_IMAGES[slot] then
+		pcall(function() drawing.Data = BBOT_IMAGES[slot] end)
 	end
 end
+CreateThread(function()
+	for i = 1, #BBOT_IMAGE_URLS do
+		local ok, data = pcall(game.HttpGet, game, BBOT_IMAGE_URLS[i])
+		if ok and data then
+			BBOT_IMAGES[i] = data
+			local refs = BBOT_IMAGE_REFS[i]
+			if refs then
+				for _, d in ipairs(refs) do
+					pcall(function()
+						if d then d.Data = data end
+					end)
+				end
+			end
+		end
+	end
+end)
 
 loadstart = tick()
 
@@ -517,27 +512,27 @@ NETWORK:SetOutgoingKBPSLimit(0)
 
 setfpscap(maxfps or 144)
 
-if not isfolder("Akko.farm") then
-	makefolder("Akko.farm")
-	if not isfile("Akko.farm/relations.bb") then
-		writefile("Akko.farm/relations.bb", "bb:{{friends:}{priority:}")
+if not isfolder("bitchbot") then
+	makefolder("bitchbot")
+	if not isfile("bitchbot/relations.bb") then
+		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
 	end
 else
-	if not isfile("Akko.farm/relations.bb") then
-		writefile("Akko.farm/relations.bb", "bb:{{friends:}{priority:}")
+	if not isfile("bitchbot/relations.bb") then
+		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
 	end
-	writefile("Akko.farm/debuglog.bb", "")
+	writefile("bitchbot/debuglog.bb", "")
 end
 
-if not isfolder("Akko.farm/" .. menu.game) then
-	makefolder("Akko.farm/" .. menu.game)
+if not isfolder("bitchbot/" .. menu.game) then
+	makefolder("bitchbot/" .. menu.game)
 end
 
 local configs = {}
 
 local function GetConfigs()
 	local result = {}
-	local directory = "Akko.farm\\" .. menu.game
+	local directory = "bitchbot\\" .. menu.game
 	for k, v in pairs(listfiles(directory)) do
 		local clipped = v:sub(#directory + 2)
 		if clipped:sub(#clipped - 2) == ".bb" then
@@ -547,7 +542,7 @@ local function GetConfigs()
 		end
 	end
 	if #result <= 0 then
-		writefile("Akko.farm/" .. menu.game .. "/Default.bb", "")
+		writefile("bitchbot/" .. menu.game .. "/Default.bb", "")
 	end
 	return result
 end
@@ -556,14 +551,14 @@ local Players = game:GetService("Players")
 local stats = game:GetService("Stats")
 
 local function UnpackRelations()
-	local str = isfile("Akko.farm/relations.bb") and readfile("Akko.farm/relations.bb") or nil
+	local str = isfile("bitchbot/relations.bb") and readfile("bitchbot/relations.bb") or nil
 	local final = {
 		friends = {},
 		priority = {},
 	}
 	if str then
 		if str:find("bb:{{") then
-			writefile("Akko.farm/relations.bb", "friends:\npriority:")
+			writefile("bitchbot/relations.bb", "friends:\npriority:")
 			return
 		end
 
@@ -639,7 +634,7 @@ local function WriteRelations()
 		end
 	end
 
-	writefile("Akko.farm/relations.bb", str)
+	writefile("bitchbot/relations.bb", str)
 end
 CreateThread(function()
 	if (not menu or not menu.GetVal) then
@@ -970,11 +965,14 @@ do
 		temptable.Position = Vector2.new(pos_x, pos_y)
 		temptable.Size = Vector2.new(width, height)
 		temptable.Transparency = transparency
-		temptable.Data = imagedata or placeholderImage
+		if imagedata and #tostring(imagedata) > 0 then
+			pcall(function() temptable.Data = imagedata end)
+		end
 		table.insert(tablename, temptable)
 		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
+		return temptable
 	end
 
 	function Draw:Text(text, font, visible, pos_x, pos_y, size, centered, clr, tablename)
@@ -1118,23 +1116,31 @@ do
 	end
 
 	function Draw:CoolBox(name, x, y, width, height, tab)
+		-- outer rim
 		Draw:MenuOutlinedRect(true, x, y, width, height, { 0, 0, 0, 255 }, tab)
-		Draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, { 28, 24, 32, 255 }, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, { 32, 28, 36, 255 }, tab)
+		-- accent strip (keeps menu.mc — white by default)
 		Draw:MenuOutlinedRect(true, x + 2, y + 2, width - 3, 1, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, tab)
 		table.insert(menu.clrs.norm, tab[#tab])
-		Draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, { math.max(0, menu.mc[1] - 40), math.max(0, menu.mc[2] - 40), math.max(0, menu.mc[3] - 40), 255 }, tab)
+		Draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, {
+			math.max(0, menu.mc[1] - 40),
+			math.max(0, menu.mc[2] - 40),
+			math.max(0, menu.mc[3] - 40),
+			255
+		}, tab)
 		table.insert(menu.clrs.dark, tab[#tab])
 		Draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, { 28, 24, 32, 255 }, tab)
 
-		for i = 0, 7 do
-			Draw:MenuFilledRect(true, x + 2, y + 5 + (i * 2), width - 4, 2, { 48, 42, 52, 255 }, tab)
-			tab[#tab].Color = ColorRange(
-				i,
-				{ [1] = { start = 0, color = RGB(52, 46, 56) }, [2] = { start = 7, color = RGB(40, 36, 44) } }
-			)
+		-- smoother header gradient
+		for i = 0, 9 do
+			Draw:MenuFilledRect(true, x + 2, y + 5 + i, width - 4, 1, { 48, 42, 52, 255 }, tab)
+			tab[#tab].Color = ColorRange(i, {
+				[1] = { start = 0, color = RGB(56, 50, 60) },
+				[2] = { start = 9, color = RGB(38, 34, 42) },
+			})
 		end
 
-		Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)
+		Draw:MenuBigText(name, true, false, x + 7, y + 6, tab)
 	end
 
 	function Draw:CoolMultiBox(names, x, y, width, height, tab)
@@ -1229,12 +1235,13 @@ do
 
 	function Draw:Keybind(key, x, y, tab)
 		local temptable = {}
-		Draw:MenuFilledRect(true, x, y, 44, 16, { 25, 25, 25, 255 }, tab)
-		Draw:MenuBigText(KeyEnumToName(key), true, true, x + 22, y + 1, tab)
+		local kw = 52
+		Draw:MenuFilledRect(true, x, y, kw, 16, { 22, 22, 22, 255 }, tab)
+		Draw:MenuBigText(KeyEnumToName(key), true, true, x + math.floor(kw / 2), y + 1, tab)
 		table.insert(temptable, tab[#tab])
-		Draw:MenuOutlinedRect(true, x, y, 44, 16, { 30, 30, 30, 255 }, tab)
+		Draw:MenuOutlinedRect(true, x, y, kw, 16, { 40, 40, 40, 255 }, tab)
 		table.insert(temptable, tab[#tab])
-		Draw:MenuOutlinedRect(true, x + 1, y + 1, 42, 14, { 0, 0, 0, 255 }, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, kw - 2, 14, { 0, 0, 0, 255 }, tab)
 
 		return temptable
 	end
@@ -1534,41 +1541,60 @@ function menu.Initialize(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
 	local sb = menu.sidebar or 92
 	do
-		-- outer frame (soft / flat)
+		-- outer frame
 		Draw:MenuOutlinedRect(true, 0, 0, menu.w, menu.h, { 0, 0, 0, 255 }, bbmenu)
-		Draw:MenuOutlinedRect(true, 1, 1, menu.w - 2, menu.h - 2, { 28, 24, 30, 255 }, bbmenu)
-		-- top accent bar (cute pink)
+		Draw:MenuOutlinedRect(true, 1, 1, menu.w - 2, menu.h - 2, { 30, 26, 34, 255 }, bbmenu)
+		-- top accent (menu.mc — white default)
 		Draw:MenuOutlinedRect(true, 2, 2, menu.w - 3, 1, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, bbmenu)
 		table.insert(menu.clrs.norm, bbmenu[#bbmenu])
-		Draw:MenuOutlinedRect(true, 2, 3, menu.w - 3, 1, { math.max(0, menu.mc[1] - 40), math.max(0, menu.mc[2] - 40), math.max(0, menu.mc[3] - 40), 255 }, bbmenu)
+		Draw:MenuOutlinedRect(true, 2, 3, menu.w - 3, 1, {
+			math.max(0, menu.mc[1] - 40),
+			math.max(0, menu.mc[2] - 40),
+			math.max(0, menu.mc[3] - 40),
+			255
+		}, bbmenu)
 		table.insert(menu.clrs.dark, bbmenu[#bbmenu])
 		Draw:MenuOutlinedRect(true, 2, 4, menu.w - 3, 1, { 28, 24, 30, 255 }, bbmenu)
 
-		-- soft title gradient
-		for i = 0, 19 do
+		-- title bar gradient (smoother)
+		for i = 0, 21 do
 			Draw:MenuFilledRect(true, 2, 5 + i, menu.w - 4, 1, { 20, 20, 20, 255 }, bbmenu)
-			bbmenu[6 + i].Color = ColorRange(
-				i,
-				{ [1] = { start = 0, color = RGB(55, 48, 58) }, [2] = { start = 20, color = RGB(38, 34, 42) } }
-			)
+			bbmenu[6 + i].Color = ColorRange(i, {
+				[1] = { start = 0, color = RGB(58, 50, 62) },
+				[2] = { start = 21, color = RGB(36, 32, 40) },
+			})
 		end
-		Draw:MenuFilledRect(true, 2, 25, menu.w - 4, menu.h - 27, { 38, 34, 42, 255 }, bbmenu)
+		Draw:MenuFilledRect(true, 2, 27, menu.w - 4, menu.h - 29, { 36, 32, 40, 255 }, bbmenu)
 
-		Draw:MenuBigText(MenuName or "cute menu", true, false, 8, 6, bbmenu)
+		-- title: seratonim (white) + .vip (pink)
+		Draw:MenuBigText("seratonim", true, false, 9, 7, bbmenu)
 		menu.title_text = bbmenu[#bbmenu]
+		menu.title_text.Color = RGB(255, 255, 255)
+		local title_name_w = 62
+		pcall(function()
+			title_name_w = math.max(menu.title_text.TextBounds.X, 1)
+		end)
+		Draw:MenuBigText(".vip", true, false, 9 + title_name_w, 7, bbmenu)
+		menu.title_vip = bbmenu[#bbmenu]
+		menu.title_vip.Color = RGB(255, 105, 180)
 
-		-- sidebar panel (tabs laterais)
-		Draw:MenuOutlinedRect(true, 6, 26, sb - 4, menu.h - 32, { 0, 0, 0, 255 }, bbmenu)
-		Draw:MenuFilledRect(true, 7, 27, sb - 6, menu.h - 34, { 32, 28, 36, 255 }, bbmenu)
+		-- sidebar
+		Draw:MenuOutlinedRect(true, 6, 28, sb - 4, menu.h - 34, { 0, 0, 0, 255 }, bbmenu)
+		Draw:MenuFilledRect(true, 7, 29, sb - 6, menu.h - 36, { 30, 26, 34, 255 }, bbmenu)
 
-		-- content panel (right of sidebar)
-		Draw:MenuOutlinedRect(true, sb + 2, 26, menu.w - sb - 8, menu.h - 32, { 0, 0, 0, 255 }, bbmenu)
-		Draw:MenuOutlinedRect(true, sb + 3, 27, menu.w - sb - 10, menu.h - 34, { 22, 20, 26, 255 }, bbmenu)
-		Draw:MenuOutlinedRect(true, sb + 4, 28, menu.w - sb - 11, 1, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, bbmenu)
+		-- content panel
+		Draw:MenuOutlinedRect(true, sb + 2, 28, menu.w - sb - 8, menu.h - 34, { 0, 0, 0, 255 }, bbmenu)
+		Draw:MenuOutlinedRect(true, sb + 3, 29, menu.w - sb - 10, menu.h - 36, { 24, 22, 28, 255 }, bbmenu)
+		Draw:MenuOutlinedRect(true, sb + 4, 30, menu.w - sb - 11, 1, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, bbmenu)
 		table.insert(menu.clrs.norm, bbmenu[#bbmenu])
-		Draw:MenuOutlinedRect(true, sb + 4, 29, menu.w - sb - 11, 1, { math.max(0, menu.mc[1] - 40), math.max(0, menu.mc[2] - 40), math.max(0, menu.mc[3] - 40), 255 }, bbmenu)
+		Draw:MenuOutlinedRect(true, sb + 4, 31, menu.w - sb - 11, 1, {
+			math.max(0, menu.mc[1] - 40),
+			math.max(0, menu.mc[2] - 40),
+			math.max(0, menu.mc[3] - 40),
+			255
+		}, bbmenu)
 		table.insert(menu.clrs.dark, bbmenu[#bbmenu])
-		Draw:MenuFilledRect(true, sb + 4, 31, menu.w - sb - 12, menu.h - 39, { 40, 36, 44, 255 }, bbmenu)
+		Draw:MenuFilledRect(true, sb + 4, 33, menu.w - sb - 12, menu.h - 41, { 40, 36, 44, 255 }, bbmenu)
 	end
 	-- ok now the cool part :D
 	--ANCHOR menu stuffz
@@ -1842,13 +1868,80 @@ function menu.Initialize(menutable)
 					if v1.autopos == nil then
 						Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, v1.height, tabz[k])
 					else
+						local content_h = y_pos
+						local max_allowed = menu.h - v1.y - 14
+						local box_h = content_h
 						if v1.autofill then
-							y_pos = (menu.h - 17) - v1.y
+							box_h = max_allowed
 						elseif v1.size ~= nil then
-							y_pos = v1.size
+							box_h = math.min(v1.size, max_allowed)
+						else
+							box_h = math.min(content_h, max_allowed)
 						end
-						Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, y_pos, tabz[k])
-						y_offies[v1.autopos] += y_pos + 6
+						Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, box_h, tabz[k])
+						y_offies[v1.autopos] += box_h + 6
+
+						-- scrollable groupbox when content overflows visible area
+						if content_h > box_h + 4 then
+							menu.scrollboxes = menu.scrollboxes or {}
+							local gname = v1.name
+							local view_content = math.max(1, box_h - 30)
+							local sb = {
+								tabname = v.name,
+								group = gname,
+								x = v1.x,
+								y = v1.y,
+								w = v1.width,
+								h = box_h,
+								header = 26,
+								content_h = content_h,
+								scroll = 0,
+								max_scroll = math.max(0, content_h - box_h + 8),
+								post_idxs = {},
+								opts = {},
+								bar = {},
+							}
+							-- ONLY drawings from THIS tab (postable is global — was moving other tabs!)
+							local tab_draw_set = {}
+							for _, d in ipairs(tabz[k]) do
+								tab_draw_set[d] = true
+							end
+							local gutter = 12
+							for i, pe in ipairs(menu.postable) do
+								local obj, rx, ry = pe[1], pe[2], pe[3]
+								if obj and tab_draw_set[obj]
+									and rx >= v1.x - 2 and rx <= v1.x + v1.width - gutter
+									and ry >= v1.y + 22 and ry < v1.y + content_h + 4
+								then
+									table.insert(sb.post_idxs, { i = i, base_y = ry, base_x = rx })
+								end
+							end
+							-- track options for hitbox y updates (this group only)
+							if menu.options[v.name] and menu.options[v.name][gname] then
+								for _, opt in pairs(menu.options[v.name][gname]) do
+									if type(opt) == "table" and opt[3] and type(opt[3]) == "table" and opt[3][2] then
+										table.insert(sb.opts, {
+											opt = opt,
+											base_y = opt[3][2],
+										})
+									end
+								end
+							end
+							-- scrollbar (NOT via MenuFilledRect — avoids postable fighting thumb pos)
+							local bar_x = v1.x + v1.width - 7
+							local track_h = view_content
+							local thumb_h = math.max(20, math.floor(track_h * (box_h / math.max(content_h, 1))))
+							thumb_h = math.min(thumb_h, track_h)
+							Draw:FilledRect(true, menu.x + bar_x, menu.y + v1.y + 26, 5, track_h, { 18, 18, 18, 255 }, tabz[k])
+							sb.bar.track = tabz[k][#tabz[k]]
+							Draw:FilledRect(true, menu.x + bar_x, menu.y + v1.y + 26, 5, thumb_h, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, tabz[k])
+							sb.bar.thumb = tabz[k][#tabz[k]]
+							sb.bar.thumb_h = thumb_h
+							sb.bar.track_h = track_h
+							sb.bar.base_x = bar_x
+							sb.bar.base_y = v1.y + 26
+							table.insert(menu.scrollboxes, sb)
+						end
 					end
 				else
 					if v1.autofill then
@@ -1947,6 +2040,13 @@ function menu.Initialize(menutable)
 			end
 		end
 
+		-- re-clip scrollable groupboxes after tab show/hide
+		if menu.scrollboxes and menu.apply_scrollbox then
+			for _, sbox in ipairs(menu.scrollboxes) do
+				menu.apply_scrollbox(sbox)
+			end
+		end
+
 		for k, v in pairs(menu.multigroups) do
 			if menu.tabnames[menu.activetab] == k then
 				for k1, v1 in pairs(v) do
@@ -2000,76 +2100,182 @@ function menu.Initialize(menutable)
 
 	set_plusminus(0, 20, 20)
 
-	--DROP BOX THINGY
+	--DROP BOX THINGY (+ search)
 	local dropboxthingy = {}
 	local dropboxtexty = {}
+	local drop_search_ui = {}
+	menu.drop_search = ""
+	menu.drop_filtered = {} -- maps visible row -> original index
+	menu.drop_all_values = nil
+	menu.drop_is_combo = false
+	menu.drop_scroll = 0
+	local DROP_MAX_VISIBLE = 10
+	local DROP_ROW_H = 21
 
 	Draw:OutlinedRect(false, 20, 20, 100, 22, { 20, 20, 20, 255 }, dropboxthingy)
 	Draw:OutlinedRect(false, 21, 21, 98, 20, { 0, 0, 0, 255 }, dropboxthingy)
 	Draw:FilledRect(false, 22, 22, 96, 18, { 45, 45, 45, 255 }, dropboxthingy)
+	-- search bar bg
+	Draw:FilledRect(false, 22, 22, 96, 20, { 30, 30, 30, 255 }, drop_search_ui)
+	Draw:OutlinedRect(false, 22, 22, 96, 20, { 50, 50, 50, 255 }, drop_search_ui)
+	Draw:OutlinedText("Search...", 2, false, 28, 25, 13, false, { 140, 140, 140, 255 }, { 0, 0, 0 }, drop_search_ui)
 
-	for i = 1, 30 do
+	for i = 1, 40 do
 		Draw:OutlinedText("", 2, false, 20, 20, 13, false, { 255, 255, 255, 255 }, { 0, 0, 0 }, dropboxtexty)
 	end
 
+	local function drop_build_filtered(values, query, is_combo)
+		local q = string.lower(query or "")
+		local out = {}
+		for i, v in ipairs(values) do
+			local label = is_combo and tostring(v[1]) or tostring(v)
+			if q == "" or string.find(string.lower(label), q, 1, true) then
+				table.insert(out, i)
+			end
+		end
+		return out
+	end
+
 	local function set_dropboxthingy(visible, x, y, length, value, values)
+		menu.drop_is_combo = false
+		menu.drop_all_values = values
+		if visible then
+			if not menu.drop_search then menu.drop_search = "" end
+			menu.drop_filtered = drop_build_filtered(values, menu.drop_search, false)
+		else
+			menu.drop_search = ""
+			menu.drop_filtered = {}
+			menu.drop_scroll = 0
+		end
+
+		local filtered = menu.drop_filtered
+		local nshow = math.min(#filtered, DROP_MAX_VISIBLE)
+		local search_h = 24
+		local total_h = search_h + (nshow * DROP_ROW_H) + 6
+
 		for k, v in pairs(dropboxthingy) do
 			v.Visible = visible
+		end
+		for k, v in pairs(drop_search_ui) do
+			v.Visible = visible
+		end
+
+		if not visible then
+			for k, v in pairs(dropboxtexty) do
+				v.Visible = false
+			end
+			return
 		end
 
 		dropboxthingy[1].Position = Vector2.new(x, y)
 		dropboxthingy[2].Position = Vector2.new(x + 1, y + 1)
-		dropboxthingy[3].Position = Vector2.new(x + 2, y + 22)
+		dropboxthingy[3].Position = Vector2.new(x + 2, y + 2)
+		dropboxthingy[1].Size = Vector2.new(length, total_h)
+		dropboxthingy[2].Size = Vector2.new(length - 2, total_h - 2)
+		dropboxthingy[3].Size = Vector2.new(length - 4, total_h - 4)
 
-		dropboxthingy[1].Size = Vector2.new(length, 21 * (#values + 1) + 3)
-		dropboxthingy[2].Size = Vector2.new(length - 2, (21 * (#values + 1)) + 1)
-		dropboxthingy[3].Size = Vector2.new(length - 4, (21 * #values) + 1 - 1)
+		-- search bar
+		drop_search_ui[1].Position = Vector2.new(x + 4, y + 4)
+		drop_search_ui[1].Size = Vector2.new(length - 8, 20)
+		drop_search_ui[2].Position = Vector2.new(x + 4, y + 4)
+		drop_search_ui[2].Size = Vector2.new(length - 8, 20)
+		drop_search_ui[3].Position = Vector2.new(x + 10, y + 7)
+		local st = menu.drop_search
+		if st == "" then
+			drop_search_ui[3].Text = "Search..."
+			drop_search_ui[3].Color = RGB(140, 140, 140)
+		else
+			drop_search_ui[3].Text = st .. "|"
+			drop_search_ui[3].Color = RGB(255, 255, 255)
+		end
 
-		if visible then
-			for i = 1, #values do
-				dropboxtexty[i].Position = Vector2.new(x + 6, y + 26 + ((i - 1) * 21))
+		-- list rows (respect scroll)
+		local start_i = menu.drop_scroll + 1
+		for i = 1, 40 do
+			local fi = start_i + i - 1
+			if i <= nshow and filtered[fi] then
+				local orig = filtered[fi]
+				dropboxtexty[i].Position = Vector2.new(x + 8, y + search_h + 4 + ((i - 1) * DROP_ROW_H))
 				dropboxtexty[i].Visible = true
-				dropboxtexty[i].Text = values[i]
-				if i == value then
+				dropboxtexty[i].Text = tostring(values[orig])
+				if orig == value then
 					dropboxtexty[i].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 				else
 					dropboxtexty[i].Color = RGB(255, 255, 255)
 				end
-			end
-		else
-			for k, v in pairs(dropboxtexty) do
-				v.Visible = false
+			else
+				dropboxtexty[i].Visible = false
 			end
 		end
 	end
 
 	local function set_comboboxthingy(visible, x, y, length, values)
+		menu.drop_is_combo = true
+		menu.drop_all_values = values
+		if visible then
+			if not menu.drop_search then menu.drop_search = "" end
+			menu.drop_filtered = drop_build_filtered(values, menu.drop_search, true)
+		else
+			menu.drop_search = ""
+			menu.drop_filtered = {}
+			menu.drop_scroll = 0
+		end
+
+		local filtered = menu.drop_filtered
+		local nshow = math.min(#filtered, DROP_MAX_VISIBLE)
+		local search_h = 24
+		local total_h = search_h + (nshow * DROP_ROW_H) + 6
+
 		for k, v in pairs(dropboxthingy) do
 			v.Visible = visible
+		end
+		for k, v in pairs(drop_search_ui) do
+			v.Visible = visible
+		end
+
+		if not visible then
+			for k, v in pairs(dropboxtexty) do
+				v.Visible = false
+			end
+			return
 		end
 
 		dropboxthingy[1].Position = Vector2.new(x, y)
 		dropboxthingy[2].Position = Vector2.new(x + 1, y + 1)
-		dropboxthingy[3].Position = Vector2.new(x + 2, y + 22)
+		dropboxthingy[3].Position = Vector2.new(x + 2, y + 2)
+		dropboxthingy[1].Size = Vector2.new(length, total_h)
+		dropboxthingy[2].Size = Vector2.new(length - 2, total_h - 2)
+		dropboxthingy[3].Size = Vector2.new(length - 4, total_h - 4)
 
-		dropboxthingy[1].Size = Vector2.new(length, 22 * (#values + 1) + 2)
-		dropboxthingy[2].Size = Vector2.new(length - 2, (22 * (#values + 1)))
-		dropboxthingy[3].Size = Vector2.new(length - 4, (22 * #values))
+		drop_search_ui[1].Position = Vector2.new(x + 4, y + 4)
+		drop_search_ui[1].Size = Vector2.new(length - 8, 20)
+		drop_search_ui[2].Position = Vector2.new(x + 4, y + 4)
+		drop_search_ui[2].Size = Vector2.new(length - 8, 20)
+		drop_search_ui[3].Position = Vector2.new(x + 10, y + 7)
+		local st = menu.drop_search
+		if st == "" then
+			drop_search_ui[3].Text = "Search..."
+			drop_search_ui[3].Color = RGB(140, 140, 140)
+		else
+			drop_search_ui[3].Text = st .. "|"
+			drop_search_ui[3].Color = RGB(255, 255, 255)
+		end
 
-		if visible then
-			for i = 1, #values do
-				dropboxtexty[i].Position = Vector2.new(x + 6, y + 26 + ((i - 1) * 22))
+		local start_i = menu.drop_scroll + 1
+		for i = 1, 40 do
+			local fi = start_i + i - 1
+			if i <= nshow and filtered[fi] then
+				local orig = filtered[fi]
+				dropboxtexty[i].Position = Vector2.new(x + 8, y + search_h + 4 + ((i - 1) * DROP_ROW_H))
 				dropboxtexty[i].Visible = true
-				dropboxtexty[i].Text = values[i][1]
-				if values[i][2] then
+				dropboxtexty[i].Text = tostring(values[orig][1])
+				if values[orig][2] then
 					dropboxtexty[i].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 				else
 					dropboxtexty[i].Color = RGB(255, 255, 255)
 				end
-			end
-		else
-			for k, v in pairs(dropboxtexty) do
-				v.Visible = false
+			else
+				dropboxtexty[i].Visible = false
 			end
 		end
 	end
@@ -2236,12 +2442,25 @@ function menu.Initialize(menutable)
 	ColorpickerText("[ Apply ]", false, true, 235, cp.h - 23, cp.drawings)
 	local applytext = cp.drawings[#cp.drawings]
 
+	-- live RGB + HEX readout
+	ColorpickerText("RGB  255, 255, 255", false, false, 198, 138, cp.drawings)
+	local rgb_label = cp.drawings[#cp.drawings]
+	ColorpickerText("HEX  #FFFFFF", false, false, 198, 154, cp.drawings)
+	local hex_label = cp.drawings[#cp.drawings]
+
 	local function set_newcolor(r, g, b, a)
+		r, g, b = math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5)
 		newcolor.Color = RGB(r, g, b)
 		if a ~= nil then
 			newcolor.Transparency = a / 255
 		else
 			newcolor.Transparency = 1
+		end
+		if rgb_label then
+			rgb_label.Text = string.format("RGB  %d, %d, %d", r, g, b)
+		end
+		if hex_label then
+			hex_label.Text = string.format("HEX  #%02X%02X%02X", r, g, b)
 		end
 	end
 
@@ -2651,6 +2870,42 @@ function menu.Initialize(menutable)
 		end
 
 		if menu.open and not menu.fading then
+			-- dropdown search typing
+			if menu.dropbox_open and menu.dropbox_open[5] then
+				local kn = KeyEnumToName(key.KeyCode)
+				local changed = false
+				if kn == "Back" then
+					if #menu.drop_search > 0 then
+						menu.drop_search = string.sub(menu.drop_search, 1, #menu.drop_search - 1)
+						changed = true
+					end
+				elseif kn == "Space" then
+					menu.drop_search ..= " "
+					changed = true
+				elseif table.find(textBoxLetters, kn) then
+					local ch = INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) and string.upper(kn) or string.lower(kn)
+					if #menu.drop_search < 24 then
+						menu.drop_search ..= ch
+						changed = true
+					end
+				elseif keymodifiernames[kn] and not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+					-- digits etc
+					if #menu.drop_search < 24 then
+						menu.drop_search ..= kn
+						changed = true
+					end
+				end
+				if changed then
+					menu.drop_scroll = 0
+					local db = menu.dropbox_open
+					if menu.drop_is_combo then
+						set_comboboxthingy(true, db[3][1] + menu.x + 1, db[3][2] + menu.y + 13, db[3][3], db[1])
+					else
+						set_dropboxthingy(true, db[3][1] + menu.x + 1, db[3][2] + menu.y + 13, db[3][3], db[1], db[6])
+					end
+				end
+			end
+
 			for k, v in pairs(menu.options) do
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
@@ -2742,8 +2997,14 @@ function menu.Initialize(menutable)
 
 	function menu:SetMenuPos(x, y)
 		for k, v in pairs(menu.postable) do
-			if v[1].Visible then
+			if v[1] and v[1].Visible then
 				v[1].Position = Vector2.new(x + v[2], y + v[3])
+			end
+		end
+		-- keep scrollbar thumbs glued when dragging the window
+		if menu.scrollboxes and menu.apply_scrollbox then
+			for _, sbox in ipairs(menu.scrollboxes) do
+				menu.apply_scrollbox(sbox)
 			end
 		end
 	end
@@ -2838,7 +3099,7 @@ function menu.Initialize(menutable)
 	local buttonsInQue = {}
 
 	local function SaveCurSettings() --ANCHOR figgies
-		local figgy = "Akko.farm v2\nmade with <3 by nata and bitch\n\n" -- screw zarzel XD (and json and classy)
+		local figgy = "BitchBot v2\nmade with <3 by nata and bitch\n\n" -- screw zarzel XD (and json and classy)
 
 		for k, v in next, menuElementTypes do
 			figgy ..= v .. "s {\n"
@@ -2962,7 +3223,7 @@ function menu.Initialize(menutable)
 			table.insert(lines, s)
 		end
 
-		if lines[1] == "Akko.farm v2" then
+		if lines[1] == "BitchBot v2" then
 			local start = nil
 			for i, v in next, lines do
 				if v == "toggles {" then
@@ -3285,7 +3546,7 @@ function menu.Initialize(menutable)
 	function menu.saveconfig()
 		local figgy = SaveCurSettings()
 		writefile(
-			"Akko.farm/"
+			"bitchbot/"
 				.. menu.game
 				.. "/"
 				.. menu.options["Settings"]["Configuration"]["ConfigName"][1]
@@ -3297,7 +3558,7 @@ function menu.Initialize(menutable)
 	end
 	
 	function menu.loadconfig()
-		local configname = "Akko.farm/"
+		local configname = "bitchbot/"
 			.. menu.game
 			.. "/"
 			.. menu.options["Settings"]["Configuration"]["ConfigName"][1]
@@ -3658,8 +3919,9 @@ function menu.Initialize(menutable)
 									end
 									if v2[5] ~= nil then
 										if v2[5][2] == "keybind" then
-											if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 44, 16) then
+											if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 52, 16) then
 												v2[5][4][2].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+												v2[5][4][1].Text = "..."
 												v2[5][5] = true
 											end
 										elseif v2[5][2] == "single colorpicker" then
@@ -3757,6 +4019,8 @@ function menu.Initialize(menutable)
 									end
 									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
 										if not v2[5] then
+											menu.drop_search = ""
+											menu.drop_scroll = 0
 											set_dropboxthingy(
 												true,
 												v2[3][1] + menu.x + 1,
@@ -3772,33 +4036,29 @@ function menu.Initialize(menutable)
 											v2[5] = false
 											newdropbox_open = nil
 										end
-									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5]
-									then
-										for i = 1, #v2[6] do
-											if menu:MouseInMenu(
-													v2[3][1],
-													v2[3][2] + 36 + ((i - 1) * 21),
-													v2[3][3],
-													21
-												)
-											then
-												v2[4][1].Text = v2[6][i]
-												v2[1] = i
-												set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
-												v2[5] = false
-												newdropbox_open = nil
-											end
-										end
-
-										local conf_ok, conf_ref = pcall(function()
-											return menu.options["Settings"]["Configuration"]["Configs"]
-										end)
-										if conf_ok and conf_ref and v2 == conf_ref then
-											local textbox = menu.options["Settings"]["Configuration"]["ConfigName"]
-											if textbox then
-												local relconfigs = GetConfigs()
-												textbox[1] = relconfigs[conf_ref[1]]
-												if textbox[4] then textbox[4].Text = textbox[1] end
+									elseif v2[5] then
+										-- click filtered rows (offset by search bar ~24px)
+										local filtered = menu.drop_filtered or {}
+										local nshow = math.min(#filtered - menu.drop_scroll, DROP_MAX_VISIBLE)
+										local list_h = 24 + nshow * DROP_ROW_H + 6
+										if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], list_h + 20) then
+											for row = 1, nshow do
+												if menu:MouseInMenu(
+														v2[3][1],
+														v2[3][2] + 13 + 24 + ((row - 1) * DROP_ROW_H),
+														v2[3][3],
+														DROP_ROW_H
+													)
+												then
+													local orig = filtered[menu.drop_scroll + row]
+													if orig then
+														v2[4][1].Text = v2[6][orig]
+														v2[1] = orig
+														set_dropboxthingy(false, 400, 200, 160, 1, { "HI q" })
+														v2[5] = false
+														newdropbox_open = nil
+													end
+												end
 											end
 										end
 									end
@@ -3810,55 +4070,58 @@ function menu.Initialize(menutable)
 									end
 									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
 										if not v2[5] then
+											menu.drop_search = ""
+											menu.drop_scroll = 0
 											set_comboboxthingy(
 												true,
 												v2[3][1] + menu.x + 1,
 												v2[3][2] + menu.y + 13,
 												v2[3][3],
-												v2[1],
-												v2[6]
+												v2[1]
 											)
 											v2[5] = true
 											newdropbox_open = v2
 										else
-											set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
+											set_dropboxthingy(false, 400, 200, 160, 1, { "HI q" })
 											v2[5] = false
 											newdropbox_open = nil
 										end
-									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5]
-									then
-										for i = 1, #v2[1] do
-											if menu:MouseInMenu(
-													v2[3][1],
-													v2[3][2] + 36 + ((i - 1) * 22),
-													v2[3][3],
-													23
-												)
-											then
-												v2[1][i][2] = not v2[1][i][2]
-												local textthing = ""
-												for k, v in pairs(v2[1]) do
-													if v[2] then
-														if textthing == "" then
-															textthing = v[1]
-														else
-															textthing = textthing .. ", " .. v[1]
+									elseif v2[5] then
+										local filtered = menu.drop_filtered or {}
+										local nshow = math.min(#filtered - menu.drop_scroll, DROP_MAX_VISIBLE)
+										local list_h = 24 + nshow * DROP_ROW_H + 6
+										if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], list_h + 20) then
+											for row = 1, nshow do
+												if menu:MouseInMenu(
+														v2[3][1],
+														v2[3][2] + 13 + 24 + ((row - 1) * DROP_ROW_H),
+														v2[3][3],
+														DROP_ROW_H
+													)
+												then
+													local orig = filtered[menu.drop_scroll + row]
+													if orig and v2[1][orig] then
+														v2[1][orig][2] = not v2[1][orig][2]
+														local textthing = ""
+														for _, vv in pairs(v2[1]) do
+															if vv[2] then
+																textthing = textthing == "" and vv[1] or (textthing .. ", " .. vv[1])
+															end
 														end
+														textthing = textthing ~= "" and textthing or "None"
+														if string.len(textthing) > 25 then
+															textthing = string_cut(textthing, 25)
+														end
+														v2[4][1].Text = textthing
+														set_comboboxthingy(
+															true,
+															v2[3][1] + menu.x + 1,
+															v2[3][2] + menu.y + 13,
+															v2[3][3],
+															v2[1]
+														)
 													end
 												end
-												textthing = textthing ~= "" and textthing or "None"
-												if string.len(textthing) > 25 then
-													textthing = string_cut(textthing, 25)
-												end
-												v2[4][1].Text = textthing
-												set_comboboxthingy(
-													true,
-													v2[3][1] + menu.x + 1,
-													v2[3][2] + menu.y + 13,
-													v2[3][3],
-													v2[1],
-													v2[6]
-												)
 											end
 										end
 									end
@@ -3955,7 +4218,7 @@ function menu.Initialize(menutable)
 			menu.mc = { 255, 255, 255 }
 			menu:set_menu_clr(255, 255, 255)
 
-			local wme = menu:GetVal("Main", "Actions", "Watermark")
+			local wme = menu:GetVal("Main", "General", "Watermark")
 			if wme == nil then
 				wme = menu:GetVal("Settings", "Options", "Watermark")
 			end
@@ -3963,7 +4226,9 @@ function menu.Initialize(menutable)
 			for k, v in pairs(menu.watermark.rect) do
 				v.Visible = wme
 			end
-			menu.watermark.text[1].Visible = wme
+			for _, t in pairs(menu.watermark.text) do
+				if t then t.Visible = wme end
+			end
 		end
 	end
 
@@ -3995,15 +4260,130 @@ function menu.Initialize(menutable)
 
 	local clickspot_x, clickspot_y, original_menu_x, original_menu_y = 0, 0, 0, 0
 
-	menu.connections.mwf = LOCAL_MOUSE.WheelForward:Connect(function()
-		if menu.open then
-			for k, v in pairs(menu.options) do
-				if menu.tabnames[menu.activetab] == k then
-					for k1, v1 in pairs(v) do
-						for k2, v2 in pairs(v1) do
-							if v2[2] == "list" then
+	local function apply_scrollbox(sb, force_tab_vis)
+		if not sb then return end
+		local top = sb.y + sb.header
+		local bot = sb.y + sb.h - 6
+		local tab_on = true
+		if force_tab_vis == false then
+			tab_on = false
+		elseif menu.tabnames[menu.activetab] ~= sb.tabname then
+			tab_on = false
+		end
+		sb.scroll = clamp(sb.scroll, 0, sb.max_scroll)
+		for _, pe in ipairs(sb.post_idxs) do
+			local entry = menu.postable[pe.i]
+			if entry and entry[1] then
+				local ny = pe.base_y - sb.scroll
+				entry[3] = ny
+				-- fully outside view → hide (partial rows near edges still show)
+				local in_view = (ny + 14) > top and ny < bot
+				local vis = tab_on and in_view
+				entry[1].Visible = vis
+				if vis then
+					entry[1].Position = Vector2.new(menu.x + entry[2], menu.y + ny)
+				end
+			end
+		end
+		for _, o in ipairs(sb.opts) do
+			if o.opt and o.opt[3] then
+				local ny = o.base_y - sb.scroll
+				local in_view = (ny + 14) > top and ny < bot
+				if tab_on and in_view then
+					o.opt[3][2] = ny
+				else
+					o.opt[3][2] = -99999 -- kill hitbox when off-view
+				end
+			end
+		end
+		-- scrollbar track + thumb (absolute, not postable)
+		if sb.bar and sb.bar.thumb then
+			local t = 0
+			if sb.max_scroll > 0 then
+				t = sb.scroll / sb.max_scroll
+			end
+			local thumb_y = sb.bar.base_y + math.floor((sb.bar.track_h - sb.bar.thumb_h) * t + 0.5)
+			local ax = menu.x + sb.bar.base_x
+			if sb.bar.track then
+				sb.bar.track.Position = Vector2.new(ax, menu.y + sb.bar.base_y)
+				sb.bar.track.Size = Vector2.new(5, sb.bar.track_h)
+				sb.bar.track.Visible = tab_on
+			end
+			sb.bar.thumb.Position = Vector2.new(ax, menu.y + thumb_y)
+			sb.bar.thumb.Size = Vector2.new(5, sb.bar.thumb_h)
+			sb.bar.thumb.Visible = tab_on
+			if menu.mc then
+				sb.bar.thumb.Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+			end
+		end
+	end
+
+	menu.apply_scrollbox = apply_scrollbox
+
+	-- initial clip for any scrollboxes created during layout
+	if menu.scrollboxes then
+		for _, sbox in ipairs(menu.scrollboxes) do
+			apply_scrollbox(sbox)
+		end
+	end
+
+	local function scroll_groupbox_at_mouse(dir)
+		if not menu.scrollboxes then return false end
+		local tabname = menu.tabnames[menu.activetab]
+		for _, sb in ipairs(menu.scrollboxes) do
+			if sb.tabname == tabname then
+				if menu:MouseInMenu(sb.x, sb.y, sb.w, sb.h) then
+					local step = 22
+					sb.scroll = clamp(sb.scroll + dir * step, 0, sb.max_scroll)
+					apply_scrollbox(sb)
+					return true
+				end
+			end
+		end
+		return false
+	end
+
+	local function scroll_dropdown(dir)
+		if not menu.dropbox_open or not menu.dropbox_open[5] then
+			return false
+		end
+		local filtered = menu.drop_filtered or {}
+		local max_scroll = math.max(0, #filtered - DROP_MAX_VISIBLE)
+		menu.drop_scroll = clamp(menu.drop_scroll + dir, 0, max_scroll)
+		local db = menu.dropbox_open
+		if menu.drop_is_combo then
+			set_comboboxthingy(true, db[3][1] + menu.x + 1, db[3][2] + menu.y + 13, db[3][3], db[1])
+		else
+			set_dropboxthingy(true, db[3][1] + menu.x + 1, db[3][2] + menu.y + 13, db[3][3], db[1], db[6])
+		end
+		return true
+	end
+
+	local function handle_menu_wheel(dir)
+		if not menu.open or menu.fading then
+			return false
+		end
+		if scroll_dropdown(dir) then
+			return true
+		end
+		if scroll_groupbox_at_mouse(dir) then
+			return true
+		end
+		-- lists
+		for k, v in pairs(menu.options) do
+			if menu.tabnames[menu.activetab] == k then
+				for k1, v1 in pairs(v) do
+					for k2, v2 in pairs(v1) do
+						if v2[2] == "list" then
+							if dir < 0 then
 								if v2[3] > 1 then
 									v2[3] -= 1
+									return true
+								end
+							else
+								if v2[5][v2[3] + v2[6]] ~= nil then
+									v2[3] += 1
+									return true
 								end
 							end
 						end
@@ -4011,24 +4391,42 @@ function menu.Initialize(menutable)
 				end
 			end
 		end
+		-- menu open: still consume wheel so camera doesn't zoom
+		return true
+	end
+
+	menu.connections.mwf = LOCAL_MOUSE.WheelForward:Connect(function()
+		handle_menu_wheel(-1)
 	end)
 
 	menu.connections.mwb = LOCAL_MOUSE.WheelBackward:Connect(function()
-		if menu.open then
-			for k, v in pairs(menu.options) do
-				if menu.tabnames[menu.activetab] == k then
-					for k1, v1 in pairs(v) do
-						for k2, v2 in pairs(v1) do
-							if v2[2] == "list" then
-								if v2[5][v2[3] + v2[6]] ~= nil then
-									v2[3] += 1
-								end
-							end
-						end
+		handle_menu_wheel(1)
+	end)
+
+	-- Sink camera zoom while menu is open
+	pcall(function()
+		local CAS = game:GetService("ContextActionService")
+		CAS:UnbindAction("BB_SinkWheel")
+		CAS:BindActionAtPriority("BB_SinkWheel", function(_, state, input)
+			if not menu or menu.unloaded then
+				return Enum.ContextActionResult.Pass
+			end
+			if menu.open and not menu.fading then
+				if state == Enum.UserInputState.Change or state == Enum.UserInputState.Begin then
+					local z = 0
+					pcall(function()
+						z = input.Position.Z
+					end)
+					if z > 0 then
+						handle_menu_wheel(-1)
+					elseif z < 0 then
+						handle_menu_wheel(1)
 					end
 				end
+				return Enum.ContextActionResult.Sink
 			end
-		end
+			return Enum.ContextActionResult.Pass
+		end, false, 4000, Enum.UserInputType.MouseWheel)
 	end)
 
 	function menu:set_menu_alphaparency(transparency)
@@ -4073,6 +4471,11 @@ function menu.Initialize(menutable)
 							end
 						end
 					end
+				end
+			end
+			if menu.scrollboxes and menu.apply_scrollbox then
+				for _, sbox in ipairs(menu.scrollboxes) do
+					menu.apply_scrollbox(sbox)
 				end
 			end
 		end
@@ -4354,7 +4757,10 @@ function menu.Initialize(menutable)
 
 					cp.hsv.s = (clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - cp.x - 12) / 155
 					cp.hsv.v = 1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155)
-					newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+					do
+						local c = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+						set_newcolor(c.R * 255, c.G * 255, c.B * 255, cp.alpha and cp.hsv.a or nil)
+					end
 				elseif cp.dragging_r then
 					set_dragbar_r(cp.x + 175, clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
 
@@ -4365,7 +4771,10 @@ function menu.Initialize(menutable)
 						)
 
 					cp.hsv.h = 1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155)
-					newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+					do
+						local c = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+						set_newcolor(c.R * 255, c.G * 255, c.B * 255, cp.alpha and cp.hsv.a or nil)
+					end
 				elseif cp.dragging_b then
 					set_dragbar_b(clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168), cp.y + 188)
 					newcolor.Transparency = (clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158
@@ -4478,12 +4887,10 @@ function menu.Initialize(menutable)
 			self.connections[k] = nil
 		end
 
-		game:service("ContextActionService"):UnbindAction("BB Keycheck")
-		--[[ if self.game == "pf" then
-			game:service("ContextActionService"):UnbindAction("BB PF check")
-		elseif self.game == "uni" then
-			game:service("ContextActionService"):UnbindAction("BB UNI check")
-		end ]]
+		pcall(function()
+			game:service("ContextActionService"):UnbindAction("BB Keycheck")
+			game:service("ContextActionService"):UnbindAction("BB_SinkWheel")
+		end)
 
 		local mt = getrawmetatable(game)
 
@@ -4592,18 +4999,10 @@ menu.Initialize({
 		name = "Main",
 		content = {
 			{
-				name = "Actions",
+				name = "General",
 				autopos = "left",
 				size = 200,
 				content = {
-					{
-						type = "button",
-						name = "Notify Test",
-					},
-					{
-						type = "button",
-						name = "Hello Notify",
-					},
 					{
 						type = "toggle",
 						name = "Watermark",
@@ -4622,14 +5021,14 @@ menu.Initialize({
 				},
 			},
 			{
-				name = "Test",
+				name = "Elements",
 				autopos = "right",
-				size = 200,
+				size = 320,
 				content = {
 					{
 						type = "slider",
-						name = "Test Slider",
-						value = 0,
+						name = "Slider",
+						value = 5,
 						minvalue = 0,
 						maxvalue = 10,
 						decimal = 0.1,
@@ -4643,7 +5042,7 @@ menu.Initialize({
 						extra = {
 							type = "keybind",
 							key = Enum.KeyCode.E,
-							toggletype = 1, -- Hold
+							toggletype = 1,
 						},
 					},
 					{
@@ -4653,17 +5052,37 @@ menu.Initialize({
 						extra = {
 							type = "keybind",
 							key = Enum.KeyCode.Q,
-							toggletype = 2, -- Toggle
+							toggletype = 2,
 						},
 					},
 					{
 						type = "toggle",
-						name = "Always Bind",
-						value = false,
+						name = "Accent Color",
+						value = true,
 						extra = {
-							type = "keybind",
-							key = Enum.KeyCode.F,
-							toggletype = 4, -- Always
+							type = "single colorpicker",
+							name = "Accent",
+							color = { 255, 105, 180 },
+						},
+					},
+					{
+						type = "dropbox",
+						name = "Target Part",
+						value = 1,
+						values = {
+							"Head", "Torso", "HumanoidRootPart", "Left Arm", "Right Arm",
+							"Left Leg", "Right Leg", "Closest", "Random",
+						},
+					},
+					{
+						type = "combobox",
+						name = "ESP Flags",
+						values = {
+							{ "Box", true },
+							{ "Name", true },
+							{ "Health", false },
+							{ "Distance", true },
+							{ "Chams", true },
 						},
 					},
 				},
@@ -4687,21 +5106,6 @@ menu.Initialize({
 						type = "toggle",
 						name = "Keybind List",
 						value = true,
-					},
-				},
-			},
-			{
-				name = "Info",
-				autopos = "right",
-				size = 140,
-				content = {
-					{
-						type = "button",
-						name = "Notify Test",
-					},
-					{
-						type = "button",
-						name = "Hello Notify",
 					},
 				},
 			},
@@ -4795,7 +5199,7 @@ do
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			local show = true
 			pcall(function()
-				local v = menu:GetVal("Main", "Actions", "Keybind List")
+				local v = menu:GetVal("Main", "General", "Keybind List")
 				if v == nil then v = menu:GetVal("Settings", "Options", "Keybind List") end
 				if v ~= nil then show = v end
 			end)
@@ -4825,7 +5229,7 @@ do
 	game.RunService.RenderStepped:Connect(function()
 		local show = true
 		pcall(function()
-			local v = menu:GetVal("Main", "Actions", "Keybind List")
+			local v = menu:GetVal("Main", "General", "Keybind List")
 			if v == nil then
 				v = menu:GetVal("Settings", "Options", "Keybind List")
 			end
@@ -4898,11 +5302,12 @@ do
 	local wm = menu.watermark
 	wm.pos = Vector2.new(50, 9)
 	wm.text = {}
-	local fulltext = "cute | 0s | 0 fps | 0 ms"
-	wm.width = #fulltext * 7 + 10
+	local fulltext = "seratonim.vip | 0s | 0 fps | 0 ms"
+	wm.width = #fulltext * 7 + 12
 	wm.height = 19
 	wm.rect = {}
 	wm.start_tick = tick()
+	wm.pink = { 255, 105, 180 }
 
 	Draw:FilledRect(
 		false,
@@ -4928,18 +5333,10 @@ do
 	end
 	Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, wm.height, { 0, 0, 0, 255 }, wm.rect)
 	Draw:OutlinedRect(false, wm.pos.x - 1, wm.pos.y - 1, wm.width + 2, wm.height + 2, { 0, 0, 0, 255 * 0.4 }, wm.rect)
-	Draw:OutlinedText(
-		fulltext,
-		2,
-		false,
-		wm.pos.x + 5,
-		wm.pos.y + 3,
-		13,
-		false,
-		{ 255, 255, 255, 255 },
-		{ 0, 0, 0, 255 },
-		wm.text
-	)
+	-- seratonim (white) + .vip (pink) + stats (white)
+	Draw:OutlinedText("seratonim", 2, false, wm.pos.x + 5, wm.pos.y + 3, 13, false, { 255, 255, 255, 255 }, { 0, 0, 0, 255 }, wm.text)
+	Draw:OutlinedText(".vip", 2, false, wm.pos.x + 5 + 63, wm.pos.y + 3, 13, false, { 255, 105, 180, 255 }, { 0, 0, 0, 255 }, wm.text)
+	Draw:OutlinedText(" | 0s | 0 fps | 0 ms", 2, false, wm.pos.x + 5 + 63 + 24, wm.pos.y + 3, 13, false, { 255, 255, 255, 255 }, { 0, 0, 0, 255 }, wm.text)
 end
 
 --ANCHOR watermak
@@ -4947,7 +5344,9 @@ for k, v in pairs(menu.watermark.rect) do
 	v.Visible = true
 end
 
-menu.watermark.text[1].Visible = true
+for _, t in pairs(menu.watermark.text) do
+	if t then t.Visible = true end
+end
 
 -- draggable watermark
 do
@@ -5018,13 +5417,26 @@ do
 			ping = math.floor(stats.Network.ServerStatsItem["Data Ping"]:GetValue())
 		end)
 
-		local fulltext = string.format("cute | %s | %d fps | %d ms", uptime, fps_acc, ping)
+		local stats = string.format(" | %s | %d fps | %d ms", uptime, fps_acc, ping)
+		local name_w, vip_w = 63, 24
 		if wm.text and wm.text[1] then
-			wm.text[1].Text = fulltext
+			wm.text[1].Text = "seratonim"
+			wm.text[1].Color = RGB(255, 255, 255)
+			pcall(function() name_w = math.max(wm.text[1].TextBounds.X, 1) end)
 		end
-		local new_w = #fulltext * 7 + 10
+		if wm.text and wm.text[2] then
+			wm.text[2].Text = ".vip"
+			wm.text[2].Color = RGB(255, 105, 180)
+			wm.text[2].Position = Vector2.new(wm.pos.x + 5 + name_w, wm.pos.y + 3)
+			pcall(function() vip_w = math.max(wm.text[2].TextBounds.X, 1) end)
+		end
+		if wm.text and wm.text[3] then
+			wm.text[3].Text = stats
+			wm.text[3].Color = RGB(255, 255, 255)
+			wm.text[3].Position = Vector2.new(wm.pos.x + 5 + name_w + vip_w, wm.pos.y + 3)
+		end
+		local new_w = 5 + name_w + vip_w + (#stats * 7) + 8
 		if new_w ~= wm.width then
-			local dw = new_w - wm.width
 			wm.width = new_w
 			for i, v in ipairs(wm.rect) do
 				if v and v.Size then
@@ -5049,9 +5461,7 @@ do
 end
 
 menu.load_time = math.floor((tick() - loadstart) * 1000)
-CreateNotification(string.format("Done loading (%d ms)", menu.load_time))
-CreateNotification("Watermark: uptime | fps | ping")
-CreateNotification("Test Slider steps 0.1 | 3 groupboxes")
+CreateNotification(string.format("seratonim.vip loaded (%d ms)", menu.load_time))
 
 loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
 if not menu.open then
