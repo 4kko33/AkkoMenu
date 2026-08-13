@@ -463,9 +463,13 @@ local Library = {
 
             local ScreenSize = Gui.Parent.AbsoluteSize / Scale
             local GuiSize = Gui.AbsoluteSize / Scale
+        
+            local MaxX = math.max(0, ScreenSize.X - GuiSize.X)
+            local MaxY = math.max(0, ScreenSize.Y - GuiSize.Y)
             
-            NewX = math.clamp(NewX, 0, ScreenSize.X - GuiSize.X)
-            NewY = math.clamp(NewY, 0, ScreenSize.Y - GuiSize.Y)
+            NewX = math.clamp(NewX, 0, MaxX)
+            NewY = math.clamp(NewY, 0, MaxY)
+
     
             Self:Tween({Position = UDim2.new(0, NewX, 0, NewY)}, TweenInfo.new(0.65, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
         end
