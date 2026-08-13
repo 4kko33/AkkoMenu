@@ -1,3 +1,23 @@
+--[[
+    Code is not as clean as it could be but it works
+    
+    Made by samet
+    This is a FREE ui release made by me (samet) on May 30 to celebrate my birthday, If anyone is selling this they are scammers.
+    The design credits for the ui goes to eskolzz. It was brought to life in luau by me.
+
+    MY ONLY ACCOUNT IS: joestar._3
+
+    If you want to commission a ui:
+    https://discord.gg/XsTteAwprs
+
+    Please give credit if used or modified.
+
+    MODIFICATIONS:
+    - Keybinds now store key name (e.g., "F") and compare correctly.
+    - Dropdown: added scroll (max height 150) and search box.
+    - MenuKeybind now uses name string (e.g., "RightShift").
+]]
+
 if getgenv().Library and type(getgenv().Library.Exit) == "function" then
     getgenv().Library:Exit()
 end
@@ -1810,13 +1830,21 @@ Library.CreateKeybind = function(Self, Data)
         Update()
     end
 
-    -- Normaliza EnumItem, nome simples ("F") e valor salvo ("Enum.KeyCode.F").
+    -- Normaliza EnumItem, nome simples ("F") e valores salvos como "Enum.KeyCode.F".
+    -- Valores vazios ou inválidos devem significar "sem keybind", nunca gerar erro.
+    local function getEnumMember(enumType, name)
+        local ok, enumItem = pcall(function()
+            return enumType[name]
+        end)
+        return ok and enumItem or nil
+    end
+
     local function resolveKey(value)
         if typeof(value) == "EnumItem" then
             return value
         end
 
-        if type(value) ~= "string" then
+        if type(value) ~= "string" or value == "" or value == "none" then
             return nil
         end
 
@@ -1824,7 +1852,12 @@ Library.CreateKeybind = function(Self, Data)
             :gsub("^Enum%.KeyCode%.", "")
             :gsub("^Enum%.UserInputType%.", "")
 
-        return Enum.KeyCode[keyName] or Enum.UserInputType[keyName]
+        if keyName == "" then
+            return nil
+        end
+
+        return getEnumMember(Enum.KeyCode, keyName)
+            or getEnumMember(Enum.UserInputType, keyName)
     end
 
     local function matchesInput(input)
