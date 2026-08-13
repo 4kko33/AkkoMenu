@@ -4879,7 +4879,7 @@ end
         end
 
         Library.Init = function(Self)
-            local SettingsPage = Self:Page({Name = "settings"})
+            local SettingsPage = Self:Page({Name = "settings"}) do
             Self.SettingsPage = SettingsPage 
                 local ThemingSection = SettingsPage:Section({Name = "Theming", Side = 2}) do
                     for Index, Value in Library.Theme do 
