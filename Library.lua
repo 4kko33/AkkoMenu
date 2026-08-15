@@ -735,130 +735,551 @@ do
         return math.floor(Number * Multiplier) / Multiplier
     end
 
-    Library.GetConfig = function(Self)
-        local Config = { }
+local ConfigRoot = tostring(Library.Directory or "juanitaaaaaaa")
+local ConfigFolder = ConfigRoot .. tostring((Library.Folders and Library.Folders.Configs) or "/Configs")
+local ThemeFolder = ConfigRoot .. tostring((Library.Folders and Library.Folders.Themes) or "/Themes")
+local AutoloadPath = ConfigRoot .. "/autoload.json"
+local ConfigVersion = 1
 
-        local Success, Result = Library:SafeCall(function()
-            for Index, Value in Library.Flags do 
-                if type(Value) == "table" and Value.Key then
-                    Config[Index] = {Key = tostring(Value.Key), Mode = Value.Mode}
-                elseif type(Value) == "table" and Value.Color then
-                    Config[Index] = {Color = "#" .. Value.HexValue, Alpha = Value.Alpha}
-                else
-                    Config[Index] = Value
-                end
-            end
-        end)
+local function configError(message)
+    return false, "[Config] " .. tostring(message)
+end
 
-        if not Success then
-            warn("Failed to get config:\n" .. tostring(Result or "erro desconhecido"))
-            return nil, tostring(Result or "erro desconhecido")
+local function hasFunction(name)
+    local environment = _G
+    if type(getgenv) == "function" then
+        local ok, globalEnvironment = pcall(getgenv)
+        if ok and type(globalEnvironment) == "table" then
+            environment = globalEnvironment
         end
+    end
+    return type(environment[name]) == "function"
+end
 
-        return HttpService:JSONEncode(Config)
+local function ensureConfigApi()
+    local required = { "isfolder", "makefolder", "isfile", "readfile", "writefile", "listfiles" }
+    for _, name in ipairs(required) do
+        if not hasFunction(name) then
+            return configError("API ausente: " .. name)
+        end
+    end
+    return true
+end
+
+local function ensureFolders()
+    local ok, err = ensureConfigApi()
+    if not ok then
+        return false, err
     end
 
-    Library.LoadConfig = function(Self, Config)
-        if type(Config) ~= "string" or Config == "" then
-            return false, "conteúdo de configuração vazio ou inválido"
+    local paths = { ConfigRoot, ConfigFolder, ThemeFolder }
+    for _, path in ipairs(paths) do
+        if type(path) ~= "string" or path == "" then
+            return configError("caminho de pasta vazio")
         end
 
-        local DecodeSuccess, Decoded = pcall(function()
-            return HttpService:JSONDecode(Config)
-        end)
-
-        if not DecodeSuccess then
-            return false, "JSON inválido: " .. tostring(Decoded)
+        local existsOk, exists = pcall(isfolder, path)
+        if not existsOk then
+            return configError("não foi possível verificar a pasta " .. path .. ": " .. tostring(exists))
         end
 
-        if type(Decoded) ~= "table" then
-            return false, "a configuração JSON deve ser um objeto"
-        end
-
-        local Success, Result = Library:SafeCall(function()
-            for Index, Value in Decoded do
-                local SetFunction = Library.SetFlags[Index]
-
-                if not SetFunction then
-                    continue
-                end
-
-                if type(Value) == "table" and Value.Key then
-                    SetFunction(Value)
-                elseif type(Value) == "table" and Value.Color then
-                    SetFunction(Value.Color, Value.Alpha)
-                else
-                    SetFunction(Value)
-                end
-            end
-        end)
-
-        if not Success then
-            return false, tostring(Result or "falha ao aplicar a configuração")
-        end
-
-        return true, Result
-    end
-
-    -- Deve ser chamado depois que o menu registrar todos os SetFlags.
-    -- O arquivo salva o nome da config, evitando cópias silenciosamente inválidas.
-    Library.LoadAutoload = function(Self)
-        local AutoloadPath = Library.Directory .. "/autoload.json"
-        if not isfile(AutoloadPath) then
-            return false, "Arquivo de autoload não existe"
-        end
-
-        local Manifest = readfile(AutoloadPath)
-        if Manifest:match("^%s*$") then
-            return false, "Nenhum autoload definido"
-        end
-
-        local DecodeOk, Data = pcall(HttpService.JSONDecode, HttpService, Manifest)
-        if not DecodeOk or type(Data) ~= "table" or type(Data.Config) ~= "string" or Data.Config == "" then
-            return false, "Manifesto de autoload inválido"
-        end
-
-        local ConfigPath = Library.Directory .. Library.Folders.Configs .. "/" .. Data.Config .. ".json"
-        if not isfile(ConfigPath) then
-            return false, "Config de autoload não existe: " .. Data.Config
-        end
-
-        local ConfigContent = readfile(ConfigPath)
-        local Success, Error = Self:LoadConfig(ConfigContent)
-        if not Success then
-            return false, Error
-        end
-
-        return true, Data.Config
-    end
-
-    Library.GetConfigsList = function(Self, Element)
-        local List = { }
-        local ReturnList = { }
-
-        List = listfiles(Library.Directory .. Library.Folders.Configs)
-
-        for Index = 1, #List do 
-            local File = List[Index]
-
-            if File:sub(-5) == ".json" then
-                local Position = File:find(".json", 1, true)
-                local StartPosition = Position
-
-                local Character = File:sub(Position, Position)
-                while Character ~= "/" and Character ~= "\\" and Character ~= "" do
-                    Position = Position - 1
-                    Character = File:sub(Position, Position)
-                end
-
-                if Character == "/" or Character == "\\" then
-                    table.insert(ReturnList, File:sub(Position + 1, StartPosition - 1))
-                end
+        if not exists then
+            local createOk, createErr = pcall(makefolder, path)
+            if not createOk then
+                return configError("não foi possível criar a pasta " .. path .. ": " .. tostring(createErr))
             end
         end
-
-        Element:Refresh(ReturnList)
     end
+
+    return true
+end
+
+local function trim(value)
+    return tostring(value or ""):match("^%s*(.-)%s*$")
+end
+
+local function normalizeConfigName(value)
+    local name = trim(value)
+    if name == "" then
+        return nil, "o nome da configuração está vazio"
+    end
+
+    if #name > 64 then
+        return nil, "o nome da configuração deve ter no máximo 64 caracteres"
+    end
+
+    -- Permite apenas nomes portáveis e impede ../, barras, espaços e caracteres especiais.
+    if not name:match("^[%w_%-]+$") then
+        return nil, "use somente letras, números, underscore e hífen no nome"
+    end
+
+    return name
+end
+
+local function configPath(name)
+    local normalized, err = normalizeConfigName(name)
+    if not normalized then
+        return nil, err
+    end
+    return ConfigFolder .. "/" .. normalized .. ".json", normalized
+end
+
+local function isFiniteNumber(value)
+    return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+end
+
+local function colorToHex(color)
+    if typeof and typeof(color) == "Color3" then
+        local r = math.clamp(math.floor(color.R * 255 + 0.5), 0, 255)
+        local g = math.clamp(math.floor(color.G * 255 + 0.5), 0, 255)
+        local b = math.clamp(math.floor(color.B * 255 + 0.5), 0, 255)
+        return string.format("#%02x%02x%02x", r, g, b)
+    end
+
+    if type(color) == "string" then
+        local hex = color:gsub("^#", ""):lower()
+        if hex:match("^[%da-f]+$") and (#hex == 3 or #hex == 6) then
+            if #hex == 3 then
+                hex = hex:gsub("(.)", "%1%1")
+            end
+            return "#" .. hex
+        end
+    end
+
+    return nil
+end
+
+local function normalizeKey(value)
+    if value == nil then
+        return nil
+    end
+
+    local key = tostring(value)
+    key = key:gsub("^Enum%.KeyCode%.", "")
+    key = key:gsub("^Enum%.UserInputType%.", "")
+    return key ~= "" and key or nil
+end
+
+local function serializeValue(value, seen)
+    local valueType = type(value)
+
+    if value == nil then
+        return nil
+    end
+
+    if valueType == "string" or valueType == "boolean" then
+        return value
+    end
+
+    if valueType == "number" then
+        return isFiniteNumber(value) and value or nil
+    end
+
+    if typeof and typeof(value) == "EnumItem" then
+        return tostring(value)
+    end
+
+    if typeof and typeof(value) == "Color3" then
+        return { Color = colorToHex(value), Alpha = 0 }
+    end
+
+    if valueType ~= "table" then
+        return nil
+    end
+
+    seen = seen or {}
+    if seen[value] then
+        return nil
+    end
+    seen[value] = true
+
+    -- Contrato de Keybind:Set({Mode = ..., Key = ...}).
+    if value.Key ~= nil then
+        local result = {
+            Key = normalizeKey(value.Key),
+            Mode = (value.Mode == "Toggle" or value.Mode == "Hold" or value.Mode == "Always") and value.Mode or "Toggle"
+        }
+        seen[value] = nil
+        return result
+    end
+
+    -- Contrato de Colorpicker:Set(color, alpha).
+    if value.Color ~= nil or value.HexValue ~= nil then
+        local hex = colorToHex(value.Color or value.HexValue)
+        if not hex then
+            seen[value] = nil
+            return nil
+        end
+        local alpha = tonumber(value.Alpha) or 0
+        seen[value] = nil
+        return { Color = hex, Alpha = math.clamp(alpha, 0, 1) }
+    end
+
+    local result = {}
+    local hasValue = false
+    for key, item in pairs(value) do
+        local safeKey = type(key) == "string" and key or tostring(key)
+        local encoded = serializeValue(item, seen)
+        if encoded ~= nil then
+            result[safeKey] = encoded
+            hasValue = true
+        end
+    end
+
+    seen[value] = nil
+    return hasValue and result or {}
+end
+
+local function decodeJson(text)
+    if type(text) ~= "string" or trim(text) == "" then
+        return nil, "conteúdo JSON vazio"
+    end
+
+    local ok, result = pcall(function()
+        return HttpService:JSONDecode(text)
+    end)
+    if not ok then
+        return nil, "JSON inválido: " .. tostring(result)
+    end
+    if type(result) ~= "table" then
+        return nil, "o JSON precisa conter um objeto"
+    end
+    return result
+end
+
+local function readText(path)
+    local ok, result = pcall(readfile, path)
+    if not ok then
+        return nil, "falha ao ler " .. path .. ": " .. tostring(result)
+    end
+    return result
+end
+
+local function writeText(path, content)
+    if type(content) ~= "string" then
+        return configError("conteúdo de escrita não é string")
+    end
+
+    local ok, err = pcall(writefile, path, content)
+    if not ok then
+        return configError("falha ao escrever " .. path .. ": " .. tostring(err))
+    end
+    return true
+end
+
+local function getConfigObject()
+    local output = {
+        Version = ConfigVersion,
+        Flags = {}
+    }
+
+    for flag, value in pairs(Library.Flags or {}) do
+        if Library.SetFlags and Library.SetFlags[flag] then
+            local encoded = serializeValue(value)
+            if encoded ~= nil then
+                output.Flags[tostring(flag)] = encoded
+            end
+        end
+    end
+
+    return output
+end
+
+local function applyConfigObject(object)
+    if type(object) ~= "table" then
+        return configError("objeto de configuração inválido")
+    end
+
+    local values = object.Flags or object
+    if type(values) ~= "table" then
+        return configError("o campo Flags precisa ser um objeto")
+    end
+
+    for flag, value in pairs(values) do
+        local setter = Library.SetFlags and Library.SetFlags[flag]
+        if setter then
+            local ok, err
+            if type(value) == "table" and value.Color ~= nil then
+                local color = tostring(value.Color):gsub("^#", "")
+                ok, err = pcall(setter, color, tonumber(value.Alpha) or 0)
+            else
+                ok, err = pcall(setter, value)
+            end
+            if not ok then
+                return configError("falha ao aplicar '" .. tostring(flag) .. "': " .. tostring(err))
+            end
+        end
+    end
+
+    return true
+end
+
+function Library:GetConfig()
+    local ok, object = pcall(getConfigObject)
+    if not ok then
+        return nil, "falha ao montar configuração: " .. tostring(object)
+    end
+
+    local encodeOk, encoded = pcall(function()
+        return HttpService:JSONEncode(object)
+    end)
+    if not encodeOk then
+        return nil, "falha ao serializar configuração: " .. tostring(encoded)
+    end
+    return encoded
+end
+
+function Library:LoadConfig(content)
+    local object, decodeErr = decodeJson(content)
+    if not object then
+        return false, decodeErr
+    end
+    return applyConfigObject(object)
+end
+
+function Library:SaveConfig(name)
+    local path, normalizedOrError = configPath(name)
+    if not path then
+        return false, normalizedOrError
+    end
+
+    local ready, readyErr = ensureFolders()
+    if not ready then
+        return false, readyErr
+    end
+
+    local encoded, encodeErr = self:GetConfig()
+    if not encoded then
+        return false, encodeErr
+    end
+
+    local existsOk, exists = pcall(isfile, path)
+    if not existsOk then
+        return configError("não foi possível verificar a configuração: " .. tostring(exists))
+    end
+    if exists then
+        return false, "a configuração '" .. normalizedOrError .. "' já existe"
+    end
+
+    return writeText(path, encoded)
+end
+
+function Library:OverwriteConfig(name)
+    local path, normalizedOrError = configPath(name)
+    if not path then
+        return false, normalizedOrError
+    end
+
+    local ready, readyErr = ensureFolders()
+    if not ready then
+        return false, readyErr
+    end
+
+    local encoded, encodeErr = self:GetConfig()
+    if not encoded then
+        return false, encodeErr
+    end
+    return writeText(path, encoded)
+end
+
+function Library:LoadConfigFile(name)
+    local path, normalizedOrError = configPath(name)
+    if not path then
+        return false, normalizedOrError
+    end
+
+    local existsOk, exists = pcall(isfile, path)
+    if not existsOk or not exists then
+        return false, "configuração não encontrada: " .. normalizedOrError
+    end
+
+    local content, readErr = readText(path)
+    if not content then
+        return false, readErr
+    end
+    return self:LoadConfig(content)
+end
+
+function Library:DeleteConfig(name)
+    local path, normalizedOrError = configPath(name)
+    if not path then
+        return false, normalizedOrError
+    end
+
+    if not hasFunction("delfile") then
+        return configError("API ausente: delfile")
+    end
+
+    local existsOk, exists = pcall(isfile, path)
+    if not existsOk or not exists then
+        return false, "configuração não encontrada: " .. normalizedOrError
+    end
+
+    local ok, err = pcall(delfile, path)
+    if not ok then
+        return configError("falha ao excluir configuração: " .. tostring(err))
+    end
+    return true
+end
+
+function Library:GetConfigsList(element)
+    local ready, readyErr = ensureFolders()
+    if not ready then
+        return false, readyErr
+    end
+
+    local ok, files = pcall(listfiles, ConfigFolder)
+    if not ok or type(files) ~= "table" then
+        return configError("não foi possível listar configurações: " .. tostring(files))
+    end
+
+    local result = {}
+    for _, filePath in ipairs(files) do
+        if type(filePath) == "string" and filePath:lower():sub(-5) == ".json" then
+            local fileName = filePath:match("([^/\\]+)%.json$")
+            local validName = fileName and normalizeConfigName(fileName)
+            if validName then
+                table.insert(result, validName)
+            end
+        end
+    end
+
+    table.sort(result, function(a, b) return a:lower() < b:lower() end)
+
+    if element and type(element.Refresh) == "function" then
+        local refreshOk, refreshErr = pcall(function() element:Refresh(result) end)
+        if not refreshOk then
+            return configError("falha ao atualizar lista: " .. tostring(refreshErr))
+        end
+    end
+
+    return true, result
+end
+
+function Library:SetAutoload(name)
+    local path, normalizedOrError = configPath(name)
+    if not path then
+        return false, normalizedOrError
+    end
+
+    local existsOk, exists = pcall(isfile, path)
+    if not existsOk or not exists then
+        return false, "configuração não encontrada: " .. normalizedOrError
+    end
+
+    local manifest = {
+        Version = ConfigVersion,
+        Config = normalizedOrError
+    }
+    local ok, encoded = pcall(function() return HttpService:JSONEncode(manifest) end)
+    if not ok then
+        return configError("falha ao criar manifesto de autoload: " .. tostring(encoded))
+    end
+    return writeText(AutoloadPath, encoded)
+end
+
+function Library:RemoveAutoload()
+    local ready, readyErr = ensureFolders()
+    if not ready then
+        return false, readyErr
+    end
+    return writeText(AutoloadPath, "")
+end
+
+function Library:LoadAutoload()
+    local content, readErr = readText(AutoloadPath)
+    if not content then
+        return false, readErr
+    end
+    if trim(content) == "" then
+        return false, "nenhum autoload definido"
+    end
+
+    local manifest, decodeErr = decodeJson(content)
+    if not manifest then
+        return false, "manifesto de autoload inválido: " .. decodeErr
+    end
+
+    local name, nameErr = normalizeConfigName(manifest.Config)
+    if not name then
+        return false, "manifesto de autoload inválido: " .. nameErr
+    end
+    local loadOk, loadErr = self:LoadConfigFile(name)
+    if not loadOk then
+        return false, loadErr
+    end
+    return true, name
+end
+
+function Library:GetTheme()
+    local theme = { Version = ConfigVersion, Flags = {} }
+    for flag, value in pairs(Library.Flags or {}) do
+        if type(value) == "table" and value.Color ~= nil and type(value.Flag) == "string" and value.Flag:find("Theming", 1, true) then
+            local encoded = serializeValue(value)
+            if encoded then
+                theme.Flags[flag] = encoded
+            end
+        end
+    end
+
+    local ok, encoded = pcall(function() return HttpService:JSONEncode(theme) end)
+    if not ok then
+        return nil, "falha ao serializar tema: " .. tostring(encoded)
+    end
+    return encoded
+end
+
+function Library:LoadTheme(content)
+    local object, decodeErr = decodeJson(content)
+    if not object then
+        return false, decodeErr
+    end
+    return applyConfigObject(object)
+end
+
+function Library:GetThemesList(element)
+    local ready, readyErr = ensureFolders()
+    if not ready then
+        return false, readyErr
+    end
+
+    local ok, files = pcall(listfiles, ThemeFolder)
+    if not ok or type(files) ~= "table" then
+        return configError("não foi possível listar temas: " .. tostring(files))
+    end
+
+    local result = {}
+    for _, filePath in ipairs(files) do
+        if type(filePath) == "string" and filePath:lower():sub(-5) == ".json" then
+            local fileName = filePath:match("([^/\\]+)%.json$")
+            if fileName then
+                table.insert(result, fileName)
+            end
+        end
+    end
+    table.sort(result, function(a, b) return a:lower() < b:lower() end)
+
+    if element and type(element.Refresh) == "function" then
+        local refreshOk, refreshErr = pcall(function() element:Refresh(result) end)
+        if not refreshOk then
+            return configError("falha ao atualizar lista de temas: " .. tostring(refreshErr))
+        end
+    end
+    return true, result
+end
+
+-- Inicialização segura. Não grava JSON vazio com formato ambíguo.
+do
+    local ok, err = ensureFolders()
+    if not ok then
+        warn(tostring(err))
+    elseif not isfile(AutoloadPath) then
+        local writeOk, writeErr = writeText(AutoloadPath, "")
+        if not writeOk then
+            warn(tostring(writeErr))
+        end
+    end
+end
 
     Library.AddToTheme = function(Self, Properties)
         if not Self or not Self.Instance then
@@ -970,66 +1391,54 @@ do
     end
 
     Library.GetTheme = function(Self)
-        local Config = { }
-
-        local Success, Result = Library:SafeCall(function()
-            for Index, Value in Library.Flags do 
-                if type(Value) == "table" and Value.Color and Value.Flag:find("Theming") then
-                    Config[Index] = {Color = "#" .. Value.HexValue, Alpha = Value.Alpha}
+        local Config = { Version = 1, Flags = {} }
+        for Index, Value in pairs(Library.Flags or {}) do
+            if type(Value) == "table" and Value.Color and type(Value.Flag) == "string" and Value.Flag:find("Theming", 1, true) then
+                local Hex = Value.HexValue or Value.Color
+                if type(Hex) == "string" then
+                    Config.Flags[Index] = { Color = Hex:sub(1, 1) == "#" and Hex or "#" .. Hex, Alpha = tonumber(Value.Alpha) or 0 }
                 end
             end
-        end)
-
-        if not Success then
-            warn("Failed to get theme:\n"..Result)
-            return
         end
-
-        return HttpService:JSONEncode(Config)
+        local Ok, Result = pcall(function() return HttpService:JSONEncode(Config) end)
+        if not Ok then
+            return nil, "falha ao serializar tema: " .. tostring(Result)
+        end
+        return Result
     end
 
     Library.LoadTheme = function(Self, Config)
-        local Decoded = HttpService:JSONDecode(Config)
-
-        local Success, Result = Library:SafeCall(function()
-            for Index, Value in Decoded do 
-                local SetFunction = Library.SetFlags[Index]
-
-                if not SetFunction then
-                    continue
-                end
-
-                if type(Value) == "table" and Value.Color then
-                    SetFunction(Value.Color, Value.Alpha)
+        local Ok, Decoded = pcall(function() return HttpService:JSONDecode(Config) end)
+        if not Ok or type(Decoded) ~= "table" then
+            return false, "JSON de tema inválido"
+        end
+        local Values = Decoded.Flags or Decoded
+        for Index, Value in pairs(Values) do
+            local SetFunction = Library.SetFlags[Index]
+            if SetFunction and type(Value) == "table" and Value.Color then
+                local Applied, Error = pcall(SetFunction, Value.Color, tonumber(Value.Alpha) or 0)
+                if not Applied then
+                    return false, "falha ao aplicar tema '" .. tostring(Index) .. "': " .. tostring(Error)
                 end
             end
-        end)
-
-        return Success, Result
+        end
+        return true
     end
 
     Library.GetThemesList = function(Self, Element)
-        local List = { }
-        local ReturnList = { }
-
-        List = listfiles(Library.Directory .. Library.Folders.Themes)
-
-        for Index = 1, #List do 
-            local File = List[Index]
-
-            if File:sub(-5) == ".json" then
-                local Position = File:find(".json", 1, true)
-                local StartPosition = Position
-
-                local Character = File:sub(Position, Position)
-                while Character ~= "/" and Character ~= "\\" and Character ~= "" do
-                    Position = Position - 1
-                    Character = File:sub(Position, Position)
-                end
-
-                if Character == "/" or Character == "\\" then
-                    table.insert(ReturnList, File:sub(Position + 1, StartPosition - 1))
-                end
+        local Ok, Files = pcall(listfiles, Library.Directory .. Library.Folders.Themes)
+        if not Ok or type(Files) ~= "table" then
+            return false, "não foi possível listar temas: " .. tostring(Files)
+        end
+        local Result = {}
+        for _, File in ipairs(Files) do
+            local Name = type(File) == "string" and File:match("([^/\\]+)%.json$")
+            if Name then table.insert(Result, Name) end
+        end
+        table.sort(Result, function(A, B) return A:lower() < B:lower() end)
+        if Element and type(Element.Refresh) == "function" then Element:Refresh(Result) end
+        return true, Result
+    end
             end
         end
 
@@ -5246,133 +5655,150 @@ end
                     end
                 end
 
-                local ConfigName 
-                local ConfigSelected 
-                local ConfigsFolder = Library.Directory .. Library.Folders.Configs .. "/"
-
-                local ConfigsSection = SettingsPage:Section({Name = "Profiles", Side = 3}) do
-                    local ConfigsList = ConfigsSection:List({
-                        Flag = "Configs",
-                        Items = { },
-                        Multi = false,
-                        Callback = function(Value)
-                            ConfigSelected = Value
+                local ConfigName = ""
+                local ConfigSelected = nil
+                local ConfigsSection = SettingsPage:Section({ Name = "Profiles", Side = 3 })
+                local ConfigsList = ConfigsSection:List({
+                    Flag = "Configs",
+                    Items = {},
+                    Multi = false,
+                    Callback = function(value)
+                        if type(value) == "table" then
+                            ConfigSelected = value[1]
+                        else
+                            ConfigSelected = value
                         end
-                    })
+                    end
+                })
 
-                    ConfigsSection:Textbox({
-                        Name = "Config name",
-                        Flag = "ConfigName",
-                        Placeholder = "Config name",
-                        Callback = function(Value)
-                            ConfigName = Value 
-                        end
-                    })
+                ConfigsSection:Textbox({
+                    Name = "Config name",
+                    Flag = "ConfigName",
+                    Placeholder = "Config name",
+                    Callback = function(value)
+                        ConfigName = trim(value)
+                    end
+                })
 
-                    ConfigsSection:Button({
-                        Name = "Create",
-                        Callback = function()
-                            if ConfigName then 
-                                if ConfigName == "" then 
-                                    return
-                                end
-
-                                if isfile(ConfigsFolder .. ConfigName .. ".json") then 
-                                    Library:Notification("Config with the name "..ConfigName.." already exists", 3, Color3.fromRGB(255, 0, 0))
-                                    return
-                                end
-
-                                writefile(ConfigsFolder .. ConfigName .. ".json", Library:GetConfig())
-                                Library:GetConfigsList(ConfigsList)
-                                Library:Notification("Created config "..ConfigName, 3, Library.Theme.Accent)
-                            end
-                        end
-                    })
-
-                    ConfigsSection:Button({
-                        Name = "Load",
-                        Callback = function()
-                            if ConfigSelected then 
-                                if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
-                                    Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                    return
-                                end
-
-                                local Success, Error = Library:LoadConfig(readfile(ConfigsFolder .. ConfigSelected .. ".json"))
-
-                                if Success then 
-                                    Library:Notification("Loaded config "..ConfigSelected .. " succesfully", 3, Library.Theme.Accent)
-                                else
-                                    local ErrorMessage = tostring(Error or "erro desconhecido")
-                                    Library:Notification("Failed to load config " .. tostring(ConfigSelected) .. " report this to the devs: " .. ErrorMessage, 3, Color3.fromRGB(255, 0, 0))
-                                end
-                            end
-                        end
-                    })
-
-                    ConfigsSection:Button({
-                        Name = "Delete",
-                        Callback = function()
-                            if ConfigSelected then 
-                                if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
-                                    Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                    return
-                                end
-
-                                delfile(ConfigsFolder .. ConfigSelected .. ".json")
-                                Library:GetConfigsList(ConfigsList)
-                                Library:Notification("Deleted config "..ConfigSelected, 3, Library.Theme.Accent)
-                            end
-                        end
-                    })
-
-                    ConfigsSection:Button({
-                        Name = "Overwrite",
-                        Callback = function()
-                            if ConfigSelected then 
-                                if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
-                                    Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                    return
-                                end
-
-                                writefile(ConfigsFolder .. ConfigSelected .. ".json", Library:GetConfig())
-                                Library:Notification("Overwrote config "..ConfigSelected, 3, Library.Theme.Accent)
-                            end
-                        end
-                    })
-
-                    Library:GetConfigsList(ConfigsList)
+                local function notifyConfig(message, success)
+                    Library:Notification(
+                        tostring(message),
+                        3,
+                        success and Library.Theme.Accent or Color3.fromRGB(255, 70, 70)
+                    )
                 end
 
-                local AutoloadSection = SettingsPage:Section({Name = "Autoload", Side = 3}) do
-                    AutoloadSection:Button({
-                        Name = "Set selected as autoload",
-                        Callback = function()
-                            if ConfigSelected then 
-                                if not isfile(ConfigsFolder .. ConfigSelected .. ".json") then
-                                    Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
-                                    return
-                                end
-
-                                writefile(Library.Directory .. "/autoload.json", readfile(ConfigsFolder .. ConfigSelected .. ".json"))
-                                Library:Notification("Set config "..ConfigSelected.." as autoload", 3, Library.Theme.Accent)
-                            end
-                        end
-                    })
-
-                    AutoloadSection:Button({
-                        Name = "Remove autoload",
-                        Callback = function()
-                            writefile(Library.Directory .. "/autoload.json", "")
-                            Library:Notification("Removed autoload", 3, Library.Theme.Accent)
-                        end
-                    })
+                local function refreshConfigs()
+                    local ok, resultOrError = Library:GetConfigsList(ConfigsList)
+                    if not ok then
+                        notifyConfig(resultOrError, false)
+                    end
+                    return ok
                 end
 
-                local AutoloadContent = readfile(Library.Directory .. "/autoload.json")
+                ConfigsSection:Button({
+                    Name = "Create",
+                    Callback = function()
+                        local ok, err = Library:SaveConfig(ConfigName)
+                        if not ok then
+                            notifyConfig("Create failed: " .. tostring(err), false)
+                            return
+                        end
+                        refreshConfigs()
+                        notifyConfig("Created config " .. ConfigName, true)
+                    end
+                })
 
-                if AutoloadContent ~= "" then 
-                    Library:LoadConfig(AutoloadContent)
+                ConfigsSection:Button({
+                    Name = "Load",
+                    Callback = function()
+                        if not ConfigSelected then
+                            notifyConfig("Selecione uma configuração primeiro", false)
+                            return
+                        end
+                        local ok, err = Library:LoadConfigFile(ConfigSelected)
+                        if not ok then
+                            notifyConfig("Load failed: " .. tostring(err), false)
+                            return
+                        end
+                        notifyConfig("Loaded config " .. ConfigSelected, true)
+                    end
+                })
+
+                ConfigsSection:Button({
+                    Name = "Delete",
+                    Callback = function()
+                        if not ConfigSelected then
+                            notifyConfig("Selecione uma configuração primeiro", false)
+                            return
+                        end
+                        local deletedName = ConfigSelected
+                        local ok, err = Library:DeleteConfig(deletedName)
+                        if not ok then
+                            notifyConfig("Delete failed: " .. tostring(err), false)
+                            return
+                        end
+                        ConfigSelected = nil
+                        refreshConfigs()
+                        notifyConfig("Deleted config " .. deletedName, true)
+                    end
+                })
+
+                ConfigsSection:Button({
+                    Name = "Overwrite",
+                    Callback = function()
+                        if not ConfigSelected then
+                            notifyConfig("Selecione uma configuração primeiro", false)
+                            return
+                        end
+                        local ok, err = Library:OverwriteConfig(ConfigSelected)
+                        if not ok then
+                            notifyConfig("Overwrite failed: " .. tostring(err), false)
+                            return
+                        end
+                        notifyConfig("Overwrote config " .. ConfigSelected, true)
+                    end
+                })
+
+                refreshConfigs()
+
+                local AutoloadSection = SettingsPage:Section({ Name = "Autoload", Side = 3 })
+                AutoloadSection:Button({
+                    Name = "Set selected as autoload",
+                    Callback = function()
+                        if not ConfigSelected then
+                            notifyConfig("Selecione uma configuração primeiro", false)
+                            return
+                        end
+                        local ok, err = Library:SetAutoload(ConfigSelected)
+                        if not ok then
+                            notifyConfig("Autoload failed: " .. tostring(err), false)
+                            return
+                        end
+                        notifyConfig("Set " .. ConfigSelected .. " as autoload", true)
+                    end
+                })
+
+                AutoloadSection:Button({
+                    Name = "Remove autoload",
+                    Callback = function()
+                        local ok, err = Library:RemoveAutoload()
+                        if not ok then
+                            notifyConfig("Remove autoload failed: " .. tostring(err), false)
+                            return
+                        end
+                        notifyConfig("Autoload removed", true)
+                    end
+                })
+
+                -- Execute somente depois que todos os controles tiverem registrado seus SetFlags.
+                do
+                    local ok, loadedName = Library:LoadAutoload()
+                    if ok then
+                        notifyConfig("Autoloaded " .. tostring(loadedName), true)
+                    elseif loadedName and not tostring(loadedName):find("nenhum autoload", 1, true) then
+                        warn("[Config] " .. tostring(loadedName))
+                    end
                 end
             end
         end
