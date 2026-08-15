@@ -1,5 +1,5 @@
--- Inicialização Global Robusta v14
-getgenv().Library = getgenv().Library or {}
+
+getgenv().Library = {}
 local Library = getgenv().Library
 
 Library.Flags = Library.Flags or {}
@@ -78,11 +78,10 @@ local SetFlags = Library.SetFlags
     - MenuKeybind now uses name string (e.g., "RightShift").
 ]]
 
-if getgenv().Library and type(getgenv().Library.Exit) == "function" then
-    getgenv().Library:Exit()
-end
+-- A biblioteca já encerrou uma instância anterior no bootstrap.
+-- Não chame Exit() novamente aqui: isso podia invalidar a tabela atual.
 
-cloneref = cloneref or function(...) return ... end 
+local cloneref = cloneref or function(...) return ... end 
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -720,15 +719,15 @@ do
     end
 
     Library.SafeCall = function(Self, Function, ...)
-        local Arguements = { ... }
-        local Success, Result = pcall(Function, table.unpack(Arguements))
+        local Arguments = { ... }
+        local Success, Result = pcall(Function, table.unpack(Arguments))
 
         if not Success then
-            warn(Result)
-            return false
+            warn(tostring(Result))
+            return false, tostring(Result)
         end
 
-        return Success, Result
+        return true, Result
     end
 
     Library.Round = function(Self, Number, Float)
@@ -752,25 +751,39 @@ do
         end)
 
         if not Success then
-            warn("Failed to get config:\n"..Result)
-            return
+            warn("Failed to get config:\n" .. tostring(Result or "erro desconhecido"))
+            return nil, tostring(Result or "erro desconhecido")
         end
 
         return HttpService:JSONEncode(Config)
     end
 
     Library.LoadConfig = function(Self, Config)
-        local Decoded = HttpService:JSONDecode(Config)
+        if type(Config) ~= "string" or Config == "" then
+            return false, "conteúdo de configuração vazio ou inválido"
+        end
+
+        local DecodeSuccess, Decoded = pcall(function()
+            return HttpService:JSONDecode(Config)
+        end)
+
+        if not DecodeSuccess then
+            return false, "JSON inválido: " .. tostring(Decoded)
+        end
+
+        if type(Decoded) ~= "table" then
+            return false, "a configuração JSON deve ser um objeto"
+        end
 
         local Success, Result = Library:SafeCall(function()
-            for Index, Value in Decoded do 
+            for Index, Value in Decoded do
                 local SetFunction = Library.SetFlags[Index]
 
                 if not SetFunction then
                     continue
                 end
 
-                if type(Value) == "table" and Value.Key then 
+                if type(Value) == "table" and Value.Key then
                     SetFunction(Value)
                 elseif type(Value) == "table" and Value.Color then
                     SetFunction(Value.Color, Value.Alpha)
@@ -780,7 +793,43 @@ do
             end
         end)
 
-        return Success, Result
+        if not Success then
+            return false, tostring(Result or "falha ao aplicar a configuração")
+        end
+
+        return true, Result
+    end
+
+    -- Deve ser chamado depois que o menu registrar todos os SetFlags.
+    -- O arquivo salva o nome da config, evitando cópias silenciosamente inválidas.
+    Library.LoadAutoload = function(Self)
+        local AutoloadPath = Library.Directory .. "/autoload.json"
+        if not isfile(AutoloadPath) then
+            return false, "Arquivo de autoload não existe"
+        end
+
+        local Manifest = readfile(AutoloadPath)
+        if Manifest:match("^%s*$") then
+            return false, "Nenhum autoload definido"
+        end
+
+        local DecodeOk, Data = pcall(HttpService.JSONDecode, HttpService, Manifest)
+        if not DecodeOk or type(Data) ~= "table" or type(Data.Config) ~= "string" or Data.Config == "" then
+            return false, "Manifesto de autoload inválido"
+        end
+
+        local ConfigPath = Library.Directory .. Library.Folders.Configs .. "/" .. Data.Config .. ".json"
+        if not isfile(ConfigPath) then
+            return false, "Config de autoload não existe: " .. Data.Config
+        end
+
+        local ConfigContent = readfile(ConfigPath)
+        local Success, Error = Self:LoadConfig(ConfigContent)
+        if not Success then
+            return false, Error
+        end
+
+        return true, Data.Config
     end
 
     Library.GetConfigsList = function(Self, Element)
@@ -2493,32 +2542,84 @@ end
             local Padding = 8
             local Spacing = 8
         
-                        local function UpdatePositions()
-                local ViewportSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+            local function GetNotificationSize(NotificationData)
+                local Size
+                local Ok = pcall(function()
+                    local Item = NotificationData
+                        and NotificationData.Items
+                        and NotificationData.Items["Notification"]
+                    local Object = Item and Item.Instance
+                    Size = Object and Object.AbsoluteSize
+                end)
+
+                if not Ok or not Size then
+                    return nil
+                end
+
+                return Size
+            end
+
+            local function UpdatePositions()
+                local ViewportSize = Vector2.new(1920, 1080)
+                pcall(function()
+                    local CurrentCamera = workspace.CurrentCamera
+                    if CurrentCamera then
+                        ViewportSize = CurrentCamera.ViewportSize
+                    end
+                end)
+
+                local InvalidNotifications = {}
                 for Index, Value in Library.Notifications do
-                    local Height = Value.Items["Notification"].Instance.AbsoluteSize.Y
-                    local Width = Value.Items["Notification"].Instance.AbsoluteSize.X
+                    local Size = GetNotificationSize(Value)
+                    local Item = Value
+                        and Value.Items
+                        and Value.Items["Notification"]
+
+                    if not Size or not Item then
+                        table.insert(InvalidNotifications, Index)
+                        continue
+                    end
+
                     local X = Padding
                     local Y = GuiInset + Padding + 5
                     if Library.NotificationPosition == "Right" then
-                        X = ViewportSize.X - Width - Padding
+                        X = ViewportSize.X - Padding
                     end
+
                     for i = 1, Index - 1 do
-                        if Library.Notifications[i] and Library.Notifications[i].Items["Notification"] then
-                            Y += Library.Notifications[i].Items["Notification"].Instance.AbsoluteSize.Y + Spacing
+                        local PreviousSize = GetNotificationSize(Library.Notifications[i])
+                        if PreviousSize then
+                            Y += PreviousSize.Y + Spacing
                         end
                     end
-                    Value.Items["Notification"]:Tween({Position = UDim2.new(0, X, 0, Y)}, NotifTweenInfo)
+
+                    pcall(function()
+                        Item:Tween({Position = UDim2.new(0, X, 0, Y)}, NotifTweenInfo)
+                    end)
+                end
+
+                -- Remove entradas cuja GUI já foi destruída ou não pode ser acessada.
+                for i = #InvalidNotifications, 1, -1 do
+                    table.remove(Library.Notifications, InvalidNotifications[i])
                 end
             end
         
             local Items = {} do
+                local ViewportSize = Vector2.new(1920, 1080)
+                pcall(function()
+                    local CurrentCamera = workspace.CurrentCamera
+                    if CurrentCamera then
+                        ViewportSize = CurrentCamera.ViewportSize
+                    end
+                end)
+                
+                local isRight = Library.NotificationPosition == "Right"
                 Items["Notification"] = Library:Create("Frame", {
                     Name = "\0",
                     Parent = Library.NotifHolder.Instance,
                     Size = UDim2.new(0, 0, 0, 25),
-                    AnchorPoint = Vector2.new(0, 0),
-                    Position = UDim2.new(0, -260, 0, GuiInset + Padding + 5),
+                    AnchorPoint = isRight and Vector2.new(1, 0) or Vector2.new(0, 0),
+                    Position = isRight and UDim2.new(0, ViewportSize.X + 260, 0, GuiInset + Padding + 5) or UDim2.new(0, -260, 0, GuiInset + Padding + 5),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
                     BackgroundColor3 = Library.Theme["Inline"]
@@ -2644,12 +2745,27 @@ end
                     end
                 end
         
-                Items["Notification"]:Tween({Position = UDim2.new(0, -(Width + Padding + 20), 0, Items["Notification"].Instance.Position.Y.Offset)}, NotifTweenInfo)
+                local isRight = Library.NotificationPosition == "Right"
+                local ViewportSize = Vector2.new(1920, 1080)
+                pcall(function()
+                    local CurrentCamera = workspace.CurrentCamera
+                    if CurrentCamera then
+                        ViewportSize = CurrentCamera.ViewportSize
+                    end
+                end)
+                local targetX = isRight and (ViewportSize.X + 260) or -(Width + Padding + 20)
+                Items["Notification"]:Tween({Position = UDim2.new(0, targetX, 0, Items["Notification"].Instance.Position.Y.Offset)}, NotifTweenInfo)
 
                 FadeNotification(1)
         
                 task.delay(NotifTweenInfo.Time, function()
-                    Items["Notification"].Instance:Destroy()
+                    pcall(function()
+                        local Item = Items["Notification"]
+                        local Object = Item and Item.Instance
+                        if Object then
+                            Object:Destroy()
+                        end
+                    end)
                     UpdatePositions()
                 end)
             end)
@@ -2858,6 +2974,12 @@ end
             end
 
             Library:Connect(RunService.RenderStepped, function()
+                if Library.AccentRGB then
+                    local hue = (tick() % 5) / 5
+                    local color = Color3.fromHSV(hue, 1, 1)
+                    Library:ChangeTheme("Accent", color)
+                end
+
                 if not Library.AnimatedTitle then 
                     for Index, Value in Letters do 
                         Value.LetterInstance.Instance.Position = UDim2.new(0, Value.X, 0, Value.Y)
@@ -2871,7 +2993,7 @@ end
 
                     Value.LetterInstance.Instance.Position = UDim2.new(0, Value.X, 0, Value.Y + OffsetY)
                 end
-            end)            
+            end)
 
             Window:Center()
             return setmetatable(Window, Library)
@@ -2931,7 +3053,7 @@ end
                     ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0),
                     Active = true,
                     AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                    ScrollBarThickness = 0,
+                    ScrollBarThickness = 2,
                     BackgroundTransparency = 1,
                     Size = UDim2.new(1/3, 0, 1, 0),
                     BorderSizePixel = 0,
@@ -2960,7 +3082,7 @@ end
                     ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0),
                     Active = true,
                     AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                    ScrollBarThickness = 0,
+                    ScrollBarThickness = 2,
                     BackgroundTransparency = 1,
                     Size = UDim2.new(1/3, 0, 1, 0),
                     BorderSizePixel = 0,
@@ -2989,7 +3111,7 @@ end
                     ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0),
                     Active = true,
                     AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                    ScrollBarThickness = 0,
+                    ScrollBarThickness = 2,
                     BackgroundTransparency = 1,
                     Size = UDim2.new(1/3, 0, 1, 0),
                     BorderSizePixel = 0,
@@ -3385,6 +3507,21 @@ end
 
             SetFlags[Toggle.Flag] = function(Value)
                 Toggle:Set(Value)
+            end
+            
+            Library.SetFlags["MenuScale"] = function(Value)
+                local num = tonumber(Value)
+                if num then
+                    local scaleVal = math.clamp(num / 100, 0.2, 3.0)
+                    Library.MenuScale = scaleVal
+                    if Library.MenuScaleObject then
+                        Library.MenuScaleObject.Scale = scaleVal
+                    end
+                end
+            end
+
+            Library.SetFlags["AccentRGB"] = function(Value)
+                Library.AccentRGB = Value
             end
 
             return setmetatable(Toggle, Library)
@@ -4202,7 +4339,12 @@ end
             end
 
             function Dropdown:SetText(Text)
-                Items["Text"].Instance.Text = tostring(Text)
+                Items["Text"].Instance.Text = tostring(Text or "")
+            end
+
+            -- Compatibility alias used by Akkomenu.txt.
+            function Dropdown:SetValue(Value)
+                return self:Set(Value)
             end
 
             function Dropdown:SetVisibility(Bool)
@@ -4701,7 +4843,8 @@ end
                     Name = "\0",
                     Parent = Parent.Instance,
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 12),
+                    Size = UDim2.new(1, 0, 0, 0),
+                    AutomaticSize = Enum.AutomaticSize.Y,
                     BorderSizePixel = 0
                 })
                 
@@ -5031,25 +5174,35 @@ end
                         end
                     })
 
-                    local TargetScale = 100
+                    local ScaleValue = math.floor(Library.MenuScale * 100)
                     MenuSection:Textbox({
                         Name = "Menu Scale (%)",
-                        Default = "100",
+                        Flag = "MenuScale",
+                        Default = tostring(ScaleValue),
                         Placeholder = "100",
                         Callback = function(Value)
-                            TargetScale = tonumber(Value) or 100
+                            ScaleValue = tonumber(Value) or 100
                         end
                     })
 
                     MenuSection:Button({
                         Name = "Apply Scale",
                         Callback = function()
-                            local scaleVal = math.clamp(TargetScale / 100, 0.2, 3.0)
+                            local scaleVal = math.clamp(ScaleValue / 100, 0.2, 3.0)
                             Library.MenuScale = scaleVal
                             if Library.MenuScaleObject then
                                 Library.MenuScaleObject.Scale = scaleVal
                             end
-                            Library:Notification("Menu scale applied: " .. tostring(TargetScale) .. "%", 3, Library.Theme.Accent)
+                            Library:Notification("Menu scale applied: " .. tostring(ScaleValue) .. "%", 3, Library.Theme.Accent)
+                        end
+                    })
+
+                    MenuSection:Toggle({
+                        Name = "Accent RGB",
+                        Flag = "AccentRGB",
+                        Default = false,
+                        Callback = function(Value)
+                            Library.AccentRGB = Value
                         end
                     })
 
@@ -5069,14 +5222,36 @@ end
                             Library.NotificationPosition = Value
                         end
                     })
+
+                    if Self.Watermark then
+                        MenuSection:Toggle({
+                            Name = "Watermark",
+                            Flag = "Watermark",
+                            Default = true,
+                            Callback = function(Value)
+                                Self.Watermark:SetVisibility(Value)
+                            end
+                        })
+                    end
+
+                    if Self.KeybindList then 
+                        MenuSection:Toggle({
+                            Name = "Keybind list",
+                            Flag = "Keybind list",
+                            Default = true,
+                            Callback = function(Value)
+                                Self.KeybindList:SetVisibility(Value)
+                            end
+                        })
+                    end
                 end
 
-                local ProfilesSection = SettingsPage:Section({Name = "Profiles", Side = 3}) do
-                    local ConfigName 
-                    local ConfigSelected 
-                    local ConfigsFolder = Library.Directory .. Library.Folders.Configs .. "/"
+                local ConfigName 
+                local ConfigSelected 
+                local ConfigsFolder = Library.Directory .. Library.Folders.Configs .. "/"
 
-                    local ConfigsList = ProfilesSection:List({
+                local ConfigsSection = SettingsPage:Section({Name = "Profiles", Side = 3}) do
+                    local ConfigsList = ConfigsSection:List({
                         Flag = "Configs",
                         Items = { },
                         Multi = false,
@@ -5085,29 +5260,36 @@ end
                         end
                     })
 
-                    ProfilesSection:Textbox({
-                        Name = "Config Name",
-                        Placeholder = "Name",
+                    ConfigsSection:Textbox({
+                        Name = "Config name",
+                        Flag = "ConfigName",
+                        Placeholder = "Config name",
                         Callback = function(Value)
-                            ConfigName = Value
+                            ConfigName = Value 
                         end
                     })
 
-                    ProfilesSection:Button({
+                    ConfigsSection:Button({
                         Name = "Create",
                         Callback = function()
                             if ConfigName then 
-                                if isfile(ConfigsFolder .. ConfigName .. ".json") then
-                                    Library:Notification("Config already exists", 3, Color3.fromRGB(255, 0, 0))
+                                if ConfigName == "" then 
                                     return
                                 end
+
+                                if isfile(ConfigsFolder .. ConfigName .. ".json") then 
+                                    Library:Notification("Config with the name "..ConfigName.." already exists", 3, Color3.fromRGB(255, 0, 0))
+                                    return
+                                end
+
                                 writefile(ConfigsFolder .. ConfigName .. ".json", Library:GetConfig())
                                 Library:GetConfigsList(ConfigsList)
                                 Library:Notification("Created config "..ConfigName, 3, Library.Theme.Accent)
                             end
                         end
                     })
-                    ProfilesSection:Button({
+
+                    ConfigsSection:Button({
                         Name = "Load",
                         Callback = function()
                             if ConfigSelected then 
@@ -5115,16 +5297,20 @@ end
                                     Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
+
                                 local Success, Error = Library:LoadConfig(readfile(ConfigsFolder .. ConfigSelected .. ".json"))
+
                                 if Success then 
                                     Library:Notification("Loaded config "..ConfigSelected .. " succesfully", 3, Library.Theme.Accent)
                                 else
-                                    Library:Notification("Failed to load config "..ConfigSelected .. " report this to the devs: "..Error, 3, Color3.fromRGB(255, 0, 0))
+                                    local ErrorMessage = tostring(Error or "erro desconhecido")
+                                    Library:Notification("Failed to load config " .. tostring(ConfigSelected) .. " report this to the devs: " .. ErrorMessage, 3, Color3.fromRGB(255, 0, 0))
                                 end
                             end
                         end
                     })
-                    ProfilesSection:Button({
+
+                    ConfigsSection:Button({
                         Name = "Delete",
                         Callback = function()
                             if ConfigSelected then 
@@ -5132,13 +5318,15 @@ end
                                     Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
+
                                 delfile(ConfigsFolder .. ConfigSelected .. ".json")
                                 Library:GetConfigsList(ConfigsList)
                                 Library:Notification("Deleted config "..ConfigSelected, 3, Library.Theme.Accent)
                             end
                         end
                     })
-                    ProfilesSection:Button({
+
+                    ConfigsSection:Button({
                         Name = "Overwrite",
                         Callback = function()
                             if ConfigSelected then 
@@ -5146,11 +5334,13 @@ end
                                     Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
+
                                 writefile(ConfigsFolder .. ConfigSelected .. ".json", Library:GetConfig())
                                 Library:Notification("Overwrote config "..ConfigSelected, 3, Library.Theme.Accent)
                             end
                         end
                     })
+
                     Library:GetConfigsList(ConfigsList)
                 end
 
@@ -5163,11 +5353,13 @@ end
                                     Library:Notification("Config does not exist", 3, Color3.fromRGB(255, 0, 0))
                                     return
                                 end
+
                                 writefile(Library.Directory .. "/autoload.json", readfile(ConfigsFolder .. ConfigSelected .. ".json"))
                                 Library:Notification("Set config "..ConfigSelected.." as autoload", 3, Library.Theme.Accent)
                             end
                         end
                     })
+
                     AutoloadSection:Button({
                         Name = "Remove autoload",
                         Callback = function()
@@ -5176,7 +5368,9 @@ end
                         end
                     })
                 end
+
                 local AutoloadContent = readfile(Library.Directory .. "/autoload.json")
+
                 if AutoloadContent ~= "" then 
                     Library:LoadConfig(AutoloadContent)
                 end
